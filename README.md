@@ -1,10 +1,8 @@
-# testPDF
+# reimagined-octo-disco
 
-A small collection of single-file, zero-dependency HTML apps. Each file is fully self-contained — open it in a browser and it runs. No build step, no server.
+A single-file, zero-dependency browser app for triaging logs. Fully self-contained — open it in a browser and it runs. No build step, no server.
 
-## Apps
-
-### [apps/log-anomaly-analyzer.html](apps/log-anomaly-analyzer.html)
+## [apps/log-anomaly-analyzer.html](apps/log-anomaly-analyzer.html)
 
 Browser-based log triage tool that uses the Anthropic Claude API to detect anomalies, suspicious patterns, and incidents in raw log output. Supports system, auth, network, application, audit, and mixed logs.
 
@@ -25,10 +23,6 @@ The key is stored in `localStorage` under the name `laa_api_key` — it never le
 
 **Model**: `claude-sonnet-4-20250514` · `temperature: 0` · `max_tokens: 4000`
 
-### [apps/notepad.html](apps/notepad.html)
-
-Minimal in-browser notepad.
-
 ## Project structure
 
 ```
@@ -39,8 +33,7 @@ Minimal in-browser notepad.
 ├── .gitignore
 ├── README.md
 └── apps/
-    ├── log-anomaly-analyzer.html
-    └── notepad.html
+    └── log-anomaly-analyzer.html
 ```
 
 ## License
